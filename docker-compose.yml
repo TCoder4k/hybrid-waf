@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    env_file:
+      - ./.env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ml-service:
+    build: ./ml-service
+    env_file:
+      - ./ml-service/.env
+    ports:
+      - '8001:8001'
+
+  protected-api:
+    build: ./protected-api
+    env_file:
+      - ./protected-api/.env
+    # Intentionally no host port mapping — per docs/architecture.md §15/§17,
+    # protected-api is only reachable from the `backend` (WAF) container on the
+    # internal compose network, never directly from the host/internet.
+
+  backend:
+    build: ./backend
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      ML_SERVICE_URL: http://ml-service:8001
+      PROTECTED_API_URL: http://protected-api:3001
+    ports:
+      - '3000:3000'
+    depends_on:
+      - postgres
+      - ml-service
+      - protected-api
+
+  frontend:
+    build: ./frontend
+    env_file:
+      - ./frontend/.env
+    environment:
+      NEXT_PUBLIC_ADMIN_API_URL: http://localhost:3000
+    ports:
+      - '3002:3000'
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

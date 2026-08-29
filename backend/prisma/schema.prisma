@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Per docs/architecture.md §12 — minimal MVP schema, no entities beyond what's approved there.
+
+model Admin {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  @@map("admins")
+}
+
+// No relation to Admin — events are owned by the system, not a specific admin (see architecture.md §12).
+model SecurityEvent {
+  id          String   @id @default(uuid())
+  timestamp   DateTime @default(now())
+  sourceIp    String
+  method      String
+  endpoint    String
+  attackType  String
+  ruleResult  Json
+  mlResult    Json
+  confidence  Float?
+  decision    String
+  requestMeta Json
+
+  @@index([timestamp])
+  @@index([attackType])
+  @@map("security_events")
+}
+
+// Aggregate request counters only — no raw request data, no per-request rows.
+// ALLOW and BLOCK both increment here; SecurityEvent above stays BLOCK-only
+// (ADR-3). Hourly buckets, UTC. System-owned, no FK, same rationale as
+// SecurityEvent (see docs/architecture.md §12, ADR-7).
+model TrafficMetric {
+  id                 String   @id @default(uuid())
+  bucketStart        DateTime
+  totalRequests      Int      @default(0)
+  allowedRequests    Int      @default(0)
+  blockedRequests    Int      @default(0)
+  sqlInjectionBlocks Int      @default(0)
+  xssBlocks          Int      @default(0)
+
+  @@unique([bucketStart])
+  @@map("traffic_metrics")
+}
