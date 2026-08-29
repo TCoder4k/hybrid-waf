@@ -12,7 +12,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER}']
+      # -d matters: without it, pg_isready probes a database named after the
+      # user (libpq default), which doesn't exist here, and Postgres logs a
+      # spurious "database ${POSTGRES_USER} does not exist" FATAL every
+      # interval even though the server is perfectly healthy.
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -40,19 +44,32 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       ML_SERVICE_URL: http://ml-service:8001
       PROTECTED_API_URL: http://protected-api:3001
+      # Must match the frontend's host-mapped port below — the browser sends
+      # this as its Origin header, and CORS (backend/src/main.ts) only
+      # allows this exact origin, never a wildcard.
+      FRONTEND_URL: http://localhost:3002
     ports:
       - '3000:3000'
     depends_on:
-      - postgres
-      - ml-service
-      - protected-api
+      postgres:
+        condition: service_healthy
+      ml-service:
+        condition: service_started
+      protected-api:
+        condition: service_started
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        # Read by the browser, which runs on the host — not the compose
+        # network — so this must be the host-mapped backend URL, not the
+        # internal service DNS name (http://backend:3000). Baked in at
+        # BUILD time (see frontend/Dockerfile), so `--build` is required
+        # whenever this value changes.
+        NEXT_PUBLIC_ADMIN_API_URL: http://localhost:3000
     env_file:
       - ./frontend/.env
-    environment:
-      NEXT_PUBLIC_ADMIN_API_URL: http://localhost:3000
     ports:
       - '3002:3000'
     depends_on:
