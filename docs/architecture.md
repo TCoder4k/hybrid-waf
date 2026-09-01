@@ -567,6 +567,22 @@ Phase 1A is complete: all six ADRs are approved, ADR-2 and ADR-5 with the clarif
 
 ---
 
+## 20. Deployment (VPS)
+
+Not part of the Phase 0–11 roadmap or a numbered ADR — a small standalone addition once a real VPS + domain became available, documented here retroactively since it was missing from this file entirely until now.
+
+**Two separate, complete compose files** — deliberately not a base file + override merge:
+
+- `docker-compose.yml` — local dev, unchanged by this section. All 5 services' ports published on every interface (`0.0.0.0`), `FRONTEND_URL`/`NEXT_PUBLIC_ADMIN_API_URL` pointing at `localhost`. This is what every other section of this doc, every test, and every "live verification" step in `docs/memory.md` assumes.
+- `docker-compose.prod.yml` — the VPS. Every service gets `restart: unless-stopped`; `postgres` and `ml-service` publish no port at all (reachable only on the internal compose network); `backend`/`frontend` publish to `127.0.0.1` only (never `0.0.0.0`) on non-standard host ports (`8091`/`8090`), since Nginx — not Docker — is the public entry point; `backend`'s `FRONTEND_URL` and `frontend`'s build-time `NEXT_PUBLIC_ADMIN_API_URL` point at the real domain (`https://hybrid-waf.duckdns.org`, `.../api`) instead of `localhost`.
+- Why two full files instead of one override file: Compose merges list-valued keys like `ports` by **appending**, not replacing (confirmed empirically with `docker compose config`) — an override here would leave the dev `0.0.0.0` port published *alongside* the loopback-only one, defeating the point. A full standalone file sidesteps that merge behavior entirely, at the cost of duplicating the parts identical to `docker-compose.yml` (build context, `env_file`, healthcheck, `depends_on`, volumes) — if those change structurally, update both files together.
+
+**Nginx** (VPS-local, not tracked in this repo — `/etc/nginx/sites-available/hybrid-waf`) terminates TLS (Let's Encrypt, via `certbot`) at `hybrid-waf.duckdns.org` and reverse-proxies path-based: `/` → `127.0.0.1:8090` (frontend), `/api/*` → `127.0.0.1:8091` (backend, prefix stripped). Because the Dashboard calls the Admin API same-origin through `/api/*` in production, CORS (§13, `FRONTEND_URL`) never actually triggers there — it only matters for local dev's cross-port (`3002` → `3000`) calls.
+
+**Deploy is manual, not CI/CD.** No `.github/workflows/`, no webhook, nothing watches `git push`. `./deploy.sh` (repo root) is shorthand for the sequence a human runs over SSH: checks the VPS working tree has no uncommitted changes to tracked files (fails loudly rather than risk `git pull` silently clobbering an un-committed hotfix), `git pull origin main`, then `docker compose -f docker-compose.prod.yml up -d --build` (auto-detected — falls back to the plain dev file if `docker-compose.prod.yml` is absent from a given checkout), then prunes dangling images and prints container status.
+
+---
+
 ## Self-check against the 10 review questions
 
 1. 20-day feasible? Yes — each component is intentionally small; no unscoped infra work.

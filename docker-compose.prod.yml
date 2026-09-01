@@ -1,0 +1,107 @@
+# Production compose file for the VPS (behind Nginx + Let's Encrypt TLS at
+# hybrid-waf.duckdns.org — see the VPS's /etc/nginx/sites-available/hybrid-waf,
+# not tracked in this repo). Used ALONE, not merged with docker-compose.yml:
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# (deploy.sh does this automatically when this file is present.)
+#
+# Why a full standalone file instead of a `docker-compose.override.yml` on
+# top of docker-compose.yml: Compose merges list-valued keys like `ports` by
+# APPENDING, not replacing (verified empirically) — an override here would
+# leave the dev ports (e.g. `0.0.0.0:3000`) published *alongside* the
+# loopback-only ones below, defeating the point. A full separate file avoids
+# that trap entirely, at the cost of duplicating the parts that are
+# identical to docker-compose.yml (build context, env_file, healthcheck,
+# depends_on, volumes) — if those change structurally, update both files.
+#
+# docker-compose.yml (dev) stays untouched and is still what local
+# development and every doc/test in this repo assumes.
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    # No published port — Postgres is only reachable from other containers on
+    # the internal compose network. Never expose the database host-wide.
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # -d matters: without it, pg_isready probes a database named after the
+      # user (libpq default), which doesn't exist here, and Postgres logs a
+      # spurious "database ${POSTGRES_USER} does not exist" FATAL every
+      # interval even though the server is perfectly healthy.
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ml-service:
+    build: ./ml-service
+    restart: unless-stopped
+    env_file:
+      - ./ml-service/.env
+    # No published port — only backend (the WAF) talks to ml-service, over
+    # the internal compose network (http://ml-service:8001).
+
+  protected-api:
+    build: ./protected-api
+    restart: unless-stopped
+    env_file:
+      - ./protected-api/.env
+    # Intentionally no host port mapping — protected-api is only reachable
+    # from the `backend` (WAF) container on the internal compose network,
+    # never directly from the host/internet.
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      ML_SERVICE_URL: http://ml-service:8001
+      PROTECTED_API_URL: http://protected-api:3001
+      # Dashboard's real origin — Nginx terminates TLS at this domain and
+      # reverse-proxies to frontend/backend on 127.0.0.1 (see
+      # /etc/nginx/sites-available/hybrid-waf on the VPS). The browser sends
+      # this exact value as its Origin header for any cross-origin call
+      # (same-origin calls via /api/ don't need CORS at all).
+      FRONTEND_URL: https://hybrid-waf.duckdns.org
+    ports:
+      # Bound to loopback only — Nginx (not the internet) is the sole path
+      # in now that TLS is handled by the reverse proxy in front of this.
+      - '127.0.0.1:8091:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ml-service:
+        condition: service_started
+      protected-api:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Baked in at BUILD time — must be the address the browser (on the
+        # host's network, not the compose network) can actually reach.
+        # Same-origin path on the dashboard's own domain, proxied to backend
+        # by Nginx (location /api/ -> 127.0.0.1:8091) — no CORS needed.
+        NEXT_PUBLIC_ADMIN_API_URL: https://hybrid-waf.duckdns.org/api
+    restart: unless-stopped
+    env_file:
+      - ./frontend/.env
+    ports:
+      # Bound to loopback only — Nginx is the sole public entry point now.
+      - '127.0.0.1:8090:3000'
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
