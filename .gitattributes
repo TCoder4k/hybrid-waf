@@ -1,0 +1,4 @@
+# Shell scripts must keep LF line endings no matter the committer's OS or
+# core.autocrlf setting — CRLF breaks execution on Linux (deploy.sh is run
+# on the VPS; a CRLF shebang line fails to resolve there).
+*.sh text eol=lf

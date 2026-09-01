@@ -439,13 +439,25 @@ New backend dependency: `geoip-lite` + `@types/geoip-lite`.
 
 **Follow-up fix — real flag icons:** the user found that on Windows, the Unicode regional-indicator flag "emoji" (`lib/flag.ts#countryCodeToFlagEmoji`, from the Dashboard UI Redesign task) rendered as plain two-letter text ("US", "AU") instead of an actual flag image — a real Windows/Segoe-UI-Emoji font limitation (macOS/iOS/Android render the same Unicode correctly), not a data bug. Fixed by replacing it with real SVG icons: new `country-flag-icons` dependency, new `CountryFlag.tsx` component (`FLAGS[countryCode]` dynamic lookup against the package's per-ISO-code named exports), wired into both `RecentEventsTable.tsx` and `EventDetailModal.tsx`; `lib/flag.ts` deleted (no longer used anywhere). Verified via a fresh Playwright screenshot showing real flag images for US/AU/NL rows. `npm run build && npm run lint` clean.
 
+## Deployment detail
+
+**Note:** the VPS deployment itself (Ubuntu 18.04 VPS at `180.93.42.120`, DuckDNS domain `hybrid-waf.duckdns.org`, Nginx reverse proxy + Let's Encrypt TLS, Docker ports rebound to loopback-only) was done in an earlier session but was **never recorded here** — this section starts from that gap, documenting only what was confirmed/added in this session.
+
+**No CI/CD exists.** `git push` only updates GitHub — nothing on the VPS watches the remote or redeploys automatically. Confirmed by checking the repo for `.github/workflows/`, webhooks, or a watchtower-style setup: none exist. Every deploy is a manual SSH session running `git pull origin main && docker compose up -d --build` on the VPS.
+
+**New `deploy.sh`** (repo root) — shorthand for that same manual sequence, run *on the VPS* after SSHing in (`./deploy.sh`, `chmod +x` once after the first pull): logs the commit before/after pull, **aborts if the VPS working tree has uncommitted changes to tracked files** (a deploy target should never have local edits — `.env` files are untracked/gitignored so they don't trip this), then `git pull origin main`, `docker compose up -d --build`, `docker image prune -f` (avoid disk bloat from repeated rebuilds), and a final `docker compose ps`. Not CI/CD — still requires a human to SSH in and run it; that was explicitly out of scope for this ask.
+
+**New `.gitattributes`** (`*.sh text eol=lf`) — added alongside `deploy.sh` so Git normalizes shell scripts to LF regardless of the committer's OS/`core.autocrlf` (this repo is developed from Windows); without it, a CRLF-corrupted shebang line would fail to run on the Linux VPS. Verified via `git show :deploy.sh | xxd` that the staged blob is LF-only before un-staging (Claude never commits).
+
+**Not attempted:** actually SSHing in and running the deploy — the session's local SSH key (`~/.ssh/id_ed25519`) was rejected by the VPS for every username tried (root, ubuntu, admin, duytu, deploy, waf, hybridwaf, tu); the user has separate working credentials (confirmed logging in themselves as `root`) that aren't available in this environment. The user deploys manually going forward with `deploy.sh`.
+
 ## In Progress
 
 (none — awaiting review/next instruction)
 
 ## Next
 
-- No further phase or task is currently approved. `docs/CLAUDE.md` §17's roadmap (Phase 0 through Phase 11), the Dashboard UI Redesign task, and the Security Events Page task are all complete; anything beyond this (building out the remaining 4 placeholder pages, a real domain/HTTPS/Nginx layer for local dev, Phase 12+ integration/deploy hardening, or anything else) needs its own explicit scoping and approval before any work starts, per the same workflow used for every phase/task so far.
+- No further phase or task is currently approved. `docs/CLAUDE.md` §17's roadmap (Phase 0 through Phase 11), the Dashboard UI Redesign task, the Security Events Page task, and the `deploy.sh` addition are all complete; anything beyond this (building out the remaining 4 placeholder pages, actual CI/CD auto-deploy on push, Phase 12+ integration/deploy hardening, or anything else) needs its own explicit scoping and approval before any work starts, per the same workflow used for every phase/task so far.
 
 ## Architecture Decisions Log
 
