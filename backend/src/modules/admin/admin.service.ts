@@ -4,15 +4,27 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { SecurityEvent } from '@prisma/client';
+import { daysToRange } from '../../common/date-range.util';
 import {
   SecurityEventListFilter,
-  SecurityEventListResult,
   SecurityEventRepository,
 } from '../security-events/security-event.repository';
+import { TrendPoint } from '../traffic-metrics/trend.util';
 import {
   TrafficMetricRepository,
   TrafficMetricTotals,
 } from '../traffic-metrics/traffic-metric.repository';
+import {
+  AdminSecurityEvent,
+  AdminSecurityEventListResult,
+} from './admin-event.dto';
+import { lookupCountry } from './geo-lookup.util';
+
+export interface AdminStatsExtra {
+  maliciousIpCount: number;
+  countryCount: number;
+  requestsThisHour: number;
+}
 
 // Read side of Security Events and Traffic Metrics for the Admin API
 // (docs/architecture.md §11). Persistence itself is written elsewhere —
@@ -28,15 +40,20 @@ export class AdminService {
 
   async listEvents(
     filter: SecurityEventListFilter,
-  ): Promise<SecurityEventListResult> {
+  ): Promise<AdminSecurityEventListResult> {
     try {
-      return await this.securityEventRepository.findMany(filter);
+      const { items, total } =
+        await this.securityEventRepository.findMany(filter);
+      return {
+        items: items.map((event) => this.enrichWithCountry(event)),
+        total,
+      };
     } catch {
       throw new ServiceUnavailableException('Database unavailable');
     }
   }
 
-  async getEvent(id: string): Promise<SecurityEvent> {
+  async getEvent(id: string): Promise<AdminSecurityEvent> {
     let event: SecurityEvent | null;
     try {
       event = await this.securityEventRepository.findById(id);
@@ -47,14 +64,56 @@ export class AdminService {
     if (!event) {
       throw new NotFoundException('SecurityEvent not found');
     }
-    return event;
+    return this.enrichWithCountry(event);
   }
 
-  async getStats(): Promise<TrafficMetricTotals> {
+  // `days` omitted -> all-time totals (unchanged behavior from before this
+  // task). `days` given -> totals restricted to the last N days, driven by
+  // the Dashboard's date-range selector.
+  async getStats(days?: number): Promise<TrafficMetricTotals> {
     try {
-      return await this.trafficMetricRepository.getTotals();
+      const range = days !== undefined ? daysToRange(days) : undefined;
+      return await this.trafficMetricRepository.getTotals(range);
     } catch {
       throw new ServiceUnavailableException('Database unavailable');
     }
+  }
+
+  async getTrend(days: number): Promise<TrendPoint[]> {
+    try {
+      return await this.trafficMetricRepository.getDailyTrend(
+        daysToRange(days),
+      );
+    } catch {
+      throw new ServiceUnavailableException('Database unavailable');
+    }
+  }
+
+  async getStatsExtra(days?: number): Promise<AdminStatsExtra> {
+    try {
+      const range = days !== undefined ? daysToRange(days) : undefined;
+      const [ips, requestsThisHour] = await Promise.all([
+        this.securityEventRepository.findDistinctSourceIps(range),
+        this.trafficMetricRepository.getCurrentHourTotal(),
+      ]);
+
+      const countryCodes = new Set(
+        ips
+          .map((ip) => lookupCountry(ip).countryCode)
+          .filter((code): code is string => code !== null),
+      );
+
+      return {
+        maliciousIpCount: ips.length,
+        countryCount: countryCodes.size,
+        requestsThisHour,
+      };
+    } catch {
+      throw new ServiceUnavailableException('Database unavailable');
+    }
+  }
+
+  private enrichWithCountry(event: SecurityEvent): AdminSecurityEvent {
+    return { ...event, ...lookupCountry(event.sourceIp) };
   }
 }

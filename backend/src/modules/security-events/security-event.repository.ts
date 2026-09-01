@@ -1,11 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, SecurityEvent } from '@prisma/client';
+import { DateRange } from '../../common/date-range.util';
 import { PrismaService } from '../../database/prisma.service';
 
 export interface SecurityEventListFilter {
   page: number;
   pageSize: number;
   attackType?: string;
+  method?: string;
+  // Free-text match against endpoint OR sourceIp (case-insensitive
+  // "contains"). Not user-agent — requestMeta never stores one (ADR-4
+  // redaction excludes headers entirely), so there is nothing there to
+  // search.
+  search?: string;
+  minConfidence?: number;
   from?: Date;
   to?: Date;
 }
@@ -35,6 +43,18 @@ export class SecurityEventRepository {
   ): Promise<SecurityEventListResult> {
     const where: Prisma.SecurityEventWhereInput = {
       ...(filter.attackType ? { attackType: filter.attackType } : {}),
+      ...(filter.method ? { method: filter.method } : {}),
+      ...(filter.minConfidence !== undefined
+        ? { confidence: { gte: filter.minConfidence } }
+        : {}),
+      ...(filter.search
+        ? {
+            OR: [
+              { endpoint: { contains: filter.search, mode: 'insensitive' } },
+              { sourceIp: { contains: filter.search, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
       ...(filter.from || filter.to
         ? {
             timestamp: {
@@ -56,5 +76,22 @@ export class SecurityEventRepository {
     ]);
 
     return { items, total };
+  }
+
+  // Distinct source IPs behind BLOCK events, optionally restricted to a
+  // date range — feeds GET /admin/stats/extra's "malicious IP" and
+  // "country" counts. Every SecurityEvent row is already an attacker
+  // (ADR-3: BLOCK-only), so no extra filtering is needed beyond the range.
+  async findDistinctSourceIps(range?: DateRange): Promise<string[]> {
+    const where: Prisma.SecurityEventWhereInput = range
+      ? { timestamp: { gte: range.from, lte: range.to } }
+      : {};
+
+    const rows = await this.prisma.securityEvent.findMany({
+      where,
+      distinct: ['sourceIp'],
+      select: { sourceIp: true },
+    });
+    return rows.map((row) => row.sourceIp);
   }
 }

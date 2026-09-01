@@ -1,6 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
+import { DateRange } from '../../common/date-range.util';
 import { PrismaService } from '../../database/prisma.service';
+import { truncateToHour } from './bucket.util';
+import { groupBucketsByDay, TrendPoint } from './trend.util';
 
 export interface TrafficMetricIncrement {
   allowed: 0 | 1;
@@ -48,13 +51,17 @@ export class TrafficMetricRepository {
     `;
   }
 
-  // Read side for GET /admin/stats (Phase 10) — an all-time sum across every
-  // bucket, not a time-windowed query. The table is small (one row per UTC
-  // hour, no retention policy yet per docs/architecture.md §12), so summing
-  // the whole table is cheap. `_sum` fields come back `null` when the table
-  // has zero rows (fresh DB) — coalesced to 0 rather than leaking `null` into
+  // Read side for GET /admin/stats (Phase 10, extended for the Dashboard UI
+  // redesign task with an optional `range`) — an all-time sum across every
+  // bucket when `range` is omitted, exactly as before (byte-identical query,
+  // so every existing caller is unaffected), or a sum restricted to
+  // `bucketStart BETWEEN range.from AND range.to` when a date-range selector
+  // is in play. The table is small (one row per UTC hour, no retention
+  // policy yet per docs/architecture.md §12), so summing is cheap either
+  // way. `_sum` fields come back `null` when no rows match (fresh DB, or a
+  // range with no traffic) — coalesced to 0 rather than leaking `null` into
   // the API response.
-  async getTotals(): Promise<TrafficMetricTotals> {
+  async getTotals(range?: DateRange): Promise<TrafficMetricTotals> {
     const result = await this.prisma.trafficMetric.aggregate({
       _sum: {
         totalRequests: true,
@@ -63,6 +70,9 @@ export class TrafficMetricRepository {
         sqlInjectionBlocks: true,
         xssBlocks: true,
       },
+      ...(range
+        ? { where: { bucketStart: { gte: range.from, lte: range.to } } }
+        : {}),
     });
 
     return {
@@ -72,5 +82,26 @@ export class TrafficMetricRepository {
       sqlInjectionBlocks: result._sum.sqlInjectionBlocks ?? 0,
       xssBlocks: result._sum.xssBlocks ?? 0,
     };
+  }
+
+  // Daily-bucketed totals for the Request Trend chart — fetches every
+  // hourly bucket in range (at most days*24 rows, trivial) and sums them
+  // per calendar day in application code (see trend.util.ts for why).
+  async getDailyTrend(range: DateRange): Promise<TrendPoint[]> {
+    const buckets = await this.prisma.trafficMetric.findMany({
+      where: { bucketStart: { gte: range.from, lte: range.to } },
+      orderBy: { bucketStart: 'asc' },
+    });
+    return groupBucketsByDay(buckets, range.from, range.to);
+  }
+
+  // The current UTC hour's total — "current throughput" for the Quick
+  // Stats panel's "Requests/giờ", not a range average. 0 when no bucket
+  // exists yet for this hour (e.g. right after a fresh deploy).
+  async getCurrentHourTotal(): Promise<number> {
+    const row = await this.prisma.trafficMetric.findUnique({
+      where: { bucketStart: truncateToHour(new Date()) },
+    });
+    return row?.totalRequests ?? 0;
   }
 }

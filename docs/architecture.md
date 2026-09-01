@@ -92,9 +92,11 @@ A standalone Python HTTP service. Exposes a prediction endpoint and a health end
 
 ### 3.4 Frontend (`frontend`)
 
-Next.js app (App Router, client components, Tailwind — no additional UI/chart library). Talks only to the WAF's Admin API (`backend/src/admin`). No direct DB or ML access.
+Next.js app (App Router, client components, Tailwind — plus `recharts` and `lucide-react`, added by the Dashboard UI redesign task for the trend/donut charts and icon set; still no state-management or data-fetching library). Talks only to the WAF's Admin API (`backend/src/admin`). No direct DB or ML access.
 
 Built in Phase 10: `login/` (username/password → `POST /auth/login` → JWT stored in `localStorage`, per ADR-5's stateless/client-side model — there is no server session to join) and `dashboard/` (fetches `GET /admin/stats` and `GET /admin/events?pageSize=10` in parallel; renders the five stat tiles, an Attack Distribution comparison, and a Recent Security Events table; a Log out button clears the stored token client-side only, per ADR-5, with no server call). The root route (`/`) redirects to `/dashboard`, which itself redirects unauthenticated visitors on to `/login`. A `401` from either Admin API call (missing/expired/invalid token) clears the stored token and redirects to `/login`; a `503` (database unavailable) is shown as an inline banner instead of crashing the page — route protection is a client-side token check only, there is no middleware/server-side session to consult.
+
+Reworked by the Dashboard UI redesign task (standalone task, not a numbered phase — see `docs/memory.md`): `dashboard/` moved under a new `(dashboard)` route group whose `layout.tsx` provides persistent Header/Sidebar/Footer chrome and owns the "no token" guard (previously per-page). The Overview page (`/dashboard`) now also renders a date-range selector (7/14/30 days, driving `?days=` on `/admin/stats`, `/admin/stats/trend`, `/admin/stats/extra`), a Request Trend line chart and an Attack Distribution donut (both `recharts`), an event detail modal (fed from the already-fetched row, no extra request), and 4 summary panels (System Status, System Info, Quick Stats, Recent Activity). The sidebar's other 5 destinations (`/events`, `/statistics`, `/reports`, `/system`, `/settings`) are real routes rendering a shared `ComingSoonPage` placeholder — intentionally not built out, since only the Overview page had a concrete design to implement against.
 
 ### 3.5 Database (PostgreSQL)
 
@@ -391,12 +393,23 @@ Admin API surface:
 
 ```text
 POST /auth/login          → { accessToken }                                        — implemented, Phase 9
-GET  /admin/events        → paginated SecurityEvent list (filterable by attackType, date range) — implemented, Phase 9
-GET  /admin/events/:id    → SecurityEvent detail                                    — implemented, Phase 9
-GET  /admin/stats         → aggregate counts (total/allowed/blocked/SQLi/XSS, from TrafficMetric, §8a) — implemented, Phase 10
+GET  /admin/events        → paginated SecurityEvent list (filterable by attackType, method, search, minConfidence, date range/?days=; each item enriched with country/countryCode) — implemented, Phase 9; enriched, Dashboard UI redesign task; method/search/minConfidence/?days= added, Security Events Page task
+GET  /admin/events/:id    → SecurityEvent detail (same country/countryCode enrichment) — implemented, Phase 9; enriched, Dashboard UI redesign task
+GET  /admin/stats         → aggregate counts (total/allowed/blocked/SQLi/XSS, from TrafficMetric, §8a); optional ?days=N restricts to the last N days, omitted = all-time (unchanged) — implemented, Phase 10; ?days= added, Dashboard UI redesign task
+GET  /admin/stats/trend   → { date, totalRequests, allowedRequests, blockedRequests }[], one row per UTC day in ?days=N (default 7), zero-filled for days with no traffic — implemented, Dashboard UI redesign task
+GET  /admin/stats/extra   → { maliciousIpCount, countryCount, requestsThisHour }, optional ?days=N for the first two — implemented, Dashboard UI redesign task
+GET  /admin/system-status → { wafEngine: 'up', mlService, database, protectedApi } — live up/down; never 503s, "down" is itself a valid 200 — implemented, Dashboard UI redesign task
+GET  /admin/system-info   → { version, environment, uptimeSeconds, serverTime } — implemented, Dashboard UI redesign task
+GET  /admin/me            → { username }, decoded from the verified JWT (no DB read) — implemented, Dashboard UI redesign task
 ```
 
-`GET /admin/stats` reads only `TrafficMetric` (an all-time `SUM` across every hourly bucket — the table has no retention policy yet, so this is a small, cheap aggregate). It does **not** return recent events itself — the Dashboard's "Recent Security Events" panel is served by the existing `GET /admin/events?pageSize=10` instead, keeping `/admin/stats` scoped to one table and avoiding a second, duplicate query path over `SecurityEvent`.
+`GET /admin/stats` reads only `TrafficMetric` (an all-time `SUM` across every hourly bucket when `?days=` is omitted — the table has no retention policy yet, so this is a small, cheap aggregate; scoped to a `bucketStart` range when `?days=` is given). It does **not** return recent events itself — the Dashboard's "Recent Security Events" panel is served by the existing `GET /admin/events?pageSize=10` instead, keeping `/admin/stats` scoped to one table and avoiding a second, duplicate query path over `SecurityEvent`. `/admin/stats/trend` and `/admin/stats/extra` are kept as sibling endpoints rather than growing `/admin/stats`'s response shape, for the same one-table-per-endpoint reason.
+
+**GeoIP enrichment** (`GET /admin/events[/:id]`'s `country`/`countryCode` fields): resolved server-side via `geoip-lite`, an offline/local lookup database bundled as an npm dependency — no external network call, no third-party service sees any IP. `sourceIp` was already stored unredacted (ADR-4's redaction applies only to `requestMeta`), so this enriches existing data rather than storing anything new. Private/reserved/local IPs (common in dev/seed data) resolve to `null` fields, not an error.
+
+**`GET /admin/events` filtering** (Security Events Page task): `search` matches `endpoint` OR `sourceIp` (case-insensitive `contains`) — not user-agent, since `requestMeta` never stores one (ADR-4 excludes all headers, so there is nothing there to search); `method` is an exact case-normalized match; `minConfidence` filters `confidence >= N`, bounded to `[0, 1]`; `days` is sugar for `from`/`to` (same `daysToRange` helper and 1–90 bound as `/admin/stats*`), and wins over an explicit `from`/`to` if both are given.
+
+**System Status** (`GET /admin/system-status`) pings `ml-service`'s and `protected-api`'s existing `/health` endpoints (via `ML_SERVICE_URL`/`PROTECTED_API_URL`, the same env vars `MLDetectionEngine`/`ProtectedApiClientService` already use) with a short timeout, and runs a trivial `SELECT 1` for the database. `wafEngine` is always `'up'` — the endpoint answering at all is the check.
 
 No `POST /auth/logout` — per ADR-5, logout is a client-side token discard only; there is no server-side session/blacklist to call out to, so no logout endpoint exists.
 

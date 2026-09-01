@@ -36,11 +36,52 @@ export interface SecurityEvent {
   attackType: string;
   confidence: number | null;
   decision: string;
+  country: string | null;
+  countryCode: string | null;
+  // Opaque JSON blobs from the backend (detector/decision reasoning and a
+  // redacted request snapshot) — shown as-is in the event detail view,
+  // never parsed/relied on for shape by the frontend.
+  ruleResult: unknown;
+  mlResult: unknown;
+  requestMeta: unknown;
 }
 
 export interface SecurityEventListResult {
   items: SecurityEvent[];
   total: number;
+}
+
+export interface TrendPoint {
+  date: string; // YYYY-MM-DD
+  totalRequests: number;
+  allowedRequests: number;
+  blockedRequests: number;
+}
+
+export type ComponentStatus = "up" | "down";
+
+export interface SystemStatus {
+  wafEngine: "up";
+  mlService: ComponentStatus;
+  database: ComponentStatus;
+  protectedApi: ComponentStatus;
+}
+
+export interface SystemInfo {
+  version: string;
+  environment: string;
+  uptimeSeconds: number;
+  serverTime: string; // ISO 8601
+}
+
+export interface AdminStatsExtra {
+  maliciousIpCount: number;
+  countryCount: number;
+  requestsThisHour: number;
+}
+
+export interface Me {
+  username: string;
 }
 
 async function parseErrorMessage(res: Response): Promise<string> {
@@ -67,7 +108,7 @@ export async function login(
   return (await res.json()) as LoginResponse;
 }
 
-// Any authenticated GET below clears the stored token on 401 — the token is
+// Any authenticated GET below clears the stored token on a 401 — the token is
 // missing, malformed, or expired either way, and holding on to it would just
 // produce the same 401 again. Callers still decide what to do next (usually
 // redirect to /login); this only stops a dead token from being reused.
@@ -90,14 +131,70 @@ async function authenticatedGet<T>(path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
-export function getStats(): Promise<TrafficStats> {
-  return authenticatedGet<TrafficStats>("/admin/stats");
+// `days` omitted -> all-time totals (Phase 10's original behavior).
+export function getStats(days?: number): Promise<TrafficStats> {
+  return authenticatedGet<TrafficStats>(
+    `/admin/stats${days !== undefined ? `?days=${days}` : ""}`,
+  );
+}
+
+export function getStatsTrend(days: number): Promise<TrendPoint[]> {
+  return authenticatedGet<TrendPoint[]>(`/admin/stats/trend?days=${days}`);
+}
+
+export function getStatsExtra(days?: number): Promise<AdminStatsExtra> {
+  return authenticatedGet<AdminStatsExtra>(
+    `/admin/stats/extra${days !== undefined ? `?days=${days}` : ""}`,
+  );
+}
+
+export function getSystemStatus(): Promise<SystemStatus> {
+  return authenticatedGet<SystemStatus>("/admin/system-status");
+}
+
+export function getSystemInfo(): Promise<SystemInfo> {
+  return authenticatedGet<SystemInfo>("/admin/system-info");
+}
+
+export function getMe(): Promise<Me> {
+  return authenticatedGet<Me>("/admin/me");
+}
+
+export interface EventListFilter {
+  page?: number;
+  pageSize?: number;
+  attackType?: string;
+  method?: string;
+  // Matches endpoint OR sourceIp (case-insensitive "contains") — not
+  // user-agent, since requestMeta never stores one (ADR-4 redaction
+  // excludes headers entirely).
+  search?: string;
+  minConfidence?: number;
+  days?: number;
+}
+
+export function getEvents(
+  filter: EventListFilter = {},
+): Promise<SecurityEventListResult> {
+  const params = new URLSearchParams();
+  if (filter.page !== undefined) params.set("page", String(filter.page));
+  if (filter.pageSize !== undefined)
+    params.set("pageSize", String(filter.pageSize));
+  if (filter.attackType) params.set("attackType", filter.attackType);
+  if (filter.method) params.set("method", filter.method);
+  if (filter.search) params.set("search", filter.search);
+  if (filter.minConfidence !== undefined)
+    params.set("minConfidence", String(filter.minConfidence));
+  if (filter.days !== undefined) params.set("days", String(filter.days));
+
+  const qs = params.toString();
+  return authenticatedGet<SecurityEventListResult>(
+    `/admin/events${qs ? `?${qs}` : ""}`,
+  );
 }
 
 export function getRecentEvents(
   pageSize: number,
 ): Promise<SecurityEventListResult> {
-  return authenticatedGet<SecurityEventListResult>(
-    `/admin/events?page=1&pageSize=${pageSize}`,
-  );
+  return getEvents({ page: 1, pageSize });
 }
