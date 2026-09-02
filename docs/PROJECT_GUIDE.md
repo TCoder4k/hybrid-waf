@@ -534,7 +534,69 @@ Test tự động: `npm test` + `npm run test:e2e` (backend), `pytest` (ml-servi
 
 ---
 
+## 11a. Triển khai lên VPS (production deploy)
+
+Hệ thống có 1 bản demo thật chạy 24/7 tại `https://hybrid-waf.duckdns.org`
+(VPS Ubuntu, domain miễn phí DuckDNS). Có CI/CD tự động (GitHub Actions) —
+ban đầu deploy hoàn toàn thủ công qua SSH, sau đó tự động hoá lại đúng quy
+trình thủ công đó, không phát minh gì mới.
+
+**Kiến trúc production khác gì so với chạy dev ở máy cá nhân:**
+- **Nginx** đứng trước cùng, nhận HTTPS thật (chứng chỉ Let's Encrypt), rồi
+  proxy tiếp: `/` → `frontend`, `/api/*` → `backend` (bỏ tiền tố `/api`).
+- **Không service nào khác lộ cổng ra internet** — Postgres không publish
+  cổng nào cả (chỉ container nội bộ gọi được), `backend`/`frontend` chỉ bind
+  vào `127.0.0.1` (không phải `0.0.0.0`) — Nginx là **cổng vào duy nhất**.
+  Đây là 2 file compose riêng biệt phục vụ đúng mục đích đó:
+  - `docker-compose.yml` — dùng khi phát triển ở máy cá nhân (cổng mở thẳng
+    ra `localhost` để dev/test nhanh).
+  - `docker-compose.prod.yml` — dùng trên VPS (cổng khoá lại như trên).
+  - **Vì sao 2 file riêng, không dùng 1 file "override" đè lên:** đã kiểm
+    chứng thực tế — Docker Compose **cộng dồn** danh sách cổng (`ports`)
+    giữa các file `-f` truyền vào, không thay thế. Nếu chỉ ghi đè phần khác
+    biệt, cổng mở (dev) và cổng khoá (prod) sẽ **cùng tồn tại** cùng lúc,
+    coi như việc khoá cổng vô nghĩa. Nên phải viết hẳn 1 file đầy đủ riêng
+    cho production, đảm bảo đúng ý muốn.
+
+**`deploy.sh`** (script ở gốc repo) — về bản chất chỉ là gộp gọn 2 lệnh
+`git pull` + `docker compose up -d --build`, cộng thêm 1 lớp an toàn: tự
+kiểm tra VPS có đang có sửa tay chưa commit hay không trước khi pull — nếu
+có, dừng lại và báo lỗi thay vì âm thầm đè mất, để không bao giờ vô tình xoá
+mất cấu hình bảo mật production chưa kịp đưa vào Git. Ban đầu chạy hoàn toàn
+thủ công (SSH vào rồi tự gõ `./deploy.sh`).
+
+**CI/CD (`.github/workflows/deploy.yml`)** tự động hoá đúng bước cuối đó —
+không thay đổi bản chất quy trình, chỉ đổi *ai bấm nút chạy*:
+- **CI**: mỗi lần `git push` lên `main`, GitHub tự chạy song song build +
+  lint + test cả 3 service (`npm test`/`npm run test:e2e` cho backend — có
+  cả Postgres thật để chạy e2e test cần DB thật; build + lint frontend;
+  `pytest` cho ml-service).
+- **CD**: chỉ khi **cả 3 bước CI trên đều pass**, GitHub mới tự SSH vào VPS
+  và chạy đúng `./deploy.sh` — y hệt bạn tự gõ tay, chỉ khác là tự động.
+  Nếu bất kỳ bước nào fail (vd unit test đỏ), **không deploy** — code lỗi
+  không bao giờ tự động lên bản demo thật.
+- **Đánh đổi có chủ đích, không giấu:** VPS hiện chỉ chấp nhận đăng nhập
+  `root` bằng mật khẩu (không nhận SSH key nào) — nên GitHub Actions cũng
+  dùng đúng mật khẩu đó (lưu dạng secret mã hoá trong GitHub, vẫn được SSH
+  mã hoá khi truyền đi) thay vì tạo riêng 1 user giới hạn quyền chỉ để
+  deploy. Nếu secret bị lộ thì coi như lộ toàn quyền root VPS. Biết rõ rủi
+  ro này, chấp nhận cho phạm vi đồ án, ghi rõ đây là việc có thể cải thiện
+  thêm sau (tạo deploy user riêng dùng SSH key, giới hạn quyền), không phải
+  bị bỏ sót.
+
+---
+
 ## 12. Câu hỏi giảng viên có thể hỏi + gợi ý trả lời
+
+**Q: Deploy bản demo thật lên VPS như thế nào? Có tự động không?**
+Có, tự động qua GitHub Actions: mỗi lần push lên `main`, tự build + lint +
+test cả 3 service; nếu tất cả pass, tự SSH vào VPS chạy `deploy.sh` (gộp
+`git pull` + `docker compose up -d --build`) — nếu test fail thì dừng lại,
+không tự deploy code lỗi lên bản demo thật. Production dùng file compose
+riêng (`docker-compose.prod.yml`) khoá cổng — Nginx là cổng vào duy nhất từ
+internet, mọi service khác (Postgres, ml-service, backend, frontend) chỉ lộ
+ra nội bộ hoặc `127.0.0.1`. Ban đầu làm thủ công trước (script `deploy.sh`),
+sau mới tự động hoá lại đúng quy trình đó — không phát minh cách làm mới.
 
 **Q: Vì sao kết hợp Rule + ML thay vì chỉ dùng một loại?**
 Rule nhanh, deterministic, dễ giải thích nhưng cứng — chỉ bắt được đúng những

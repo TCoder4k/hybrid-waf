@@ -1,0 +1,126 @@
+name: CI/CD
+
+# CI on every push to main: build/lint/test all 3 services (matches
+# docs/CLAUDE.md §12/§16 — build+lint+unit+e2e must pass). CD only runs
+# after CI passes, and only for a real push to main (not e.g. a PR) — it
+# SSHes into the VPS and runs deploy.sh, the same manual sequence documented
+# in docs/architecture.md §20 (git pull + docker compose -f
+# docker-compose.prod.yml up -d --build), just triggered automatically now
+# instead of by hand.
+#
+# Doc-only changes are skipped entirely (no point rebuilding/redeploying
+# running containers for a README edit).
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+jobs:
+  backend-ci:
+    name: Backend build/lint/test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    # database.e2e-spec.ts and app.e2e-spec.ts need a real, reachable
+    # Postgres with migrations applied (PrismaService.onModuleInit calls
+    # $connect() eagerly) — admin-auth.e2e-spec.ts and the unit suite mock
+    # PrismaService entirely and don't need this, but the whole `test:e2e`
+    # run does since it boots every *.e2e-spec.ts file.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: waf_user
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: hybrid_waf_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U waf_user -d hybrid_waf_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://waf_user:ci_password@localhost:5432/hybrid_waf_ci
+      JWT_SECRET: ci-only-secret-never-used-in-production
+      JWT_EXPIRES_IN: 30m
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npx prisma migrate deploy
+      - run: npm run build
+      - run: npm run lint
+      - run: npm test
+      - run: npm run test:e2e
+
+  frontend-ci:
+    name: Frontend build/lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm run lint
+
+  ml-service-ci:
+    name: ML service tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ml-service
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: ml-service/requirements.txt
+      - run: pip install -r requirements.txt
+      - run: pytest
+
+  deploy:
+    name: Deploy to VPS
+    needs: [backend-ci, frontend-ci, ml-service-ci]
+    runs-on: ubuntu-latest
+    # Only main ever deploys — this workflow only triggers on push to main
+    # anyway, but this guards against a future trigger-scope change too.
+    if: github.ref == 'refs/heads/main'
+    # Never run two deploys at once — a second push landing mid-deploy waits
+    # for the first `docker compose up -d --build` to finish rather than
+    # racing it on the same VPS.
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
+    steps:
+      - name: SSH into VPS and run deploy.sh
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          # Password auth (the VPS doesn't accept the local dev SSH key at
+          # all — root only accepts a password today) rather than a private
+          # key. Still encrypted end-to-end by the SSH protocol itself, and
+          # the value only ever lives as an encrypted GitHub secret — an
+          # accepted MVP trade-off, not the more conventional key-based
+          # setup (see docs/architecture.md §20).
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            cd /var/www/hybrid-waf
+            ./deploy.sh
