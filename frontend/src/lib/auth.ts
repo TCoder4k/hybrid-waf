@@ -8,13 +8,22 @@ export function getToken(): string | null {
   if (typeof window === "undefined") {
     return null;
   }
-  return window.localStorage.getItem(TOKEN_KEY);
+  return (
+    window.localStorage.getItem(TOKEN_KEY) ??
+    window.sessionStorage.getItem(TOKEN_KEY)
+  );
 }
 
-export function setToken(token: string): void {
-  window.localStorage.setItem(TOKEN_KEY, token);
+// `remember` controls storage lifetime, not the auth model itself (still
+// stateless JWT, ADR-5): checked -> localStorage (survives closing the
+// browser), unchecked -> sessionStorage (cleared when the tab/browser
+// closes). Either way the token still expires server-side on its own.
+export function setToken(token: string, remember = true): void {
+  const storage = remember ? window.localStorage : window.sessionStorage;
+  storage.setItem(TOKEN_KEY, token);
 }
 
 export function clearToken(): void {
   window.localStorage.removeItem(TOKEN_KEY);
+  window.sessionStorage.removeItem(TOKEN_KEY);
 }

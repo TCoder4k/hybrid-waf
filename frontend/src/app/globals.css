@@ -24,3 +24,15 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Chrome/Edge tint autofilled inputs blue/yellow regardless of the
+   author's own background-color — override back to a plain white fill
+   so autofilled fields (e.g. saved login credentials) look identical to
+   an untouched input instead of visually "heavier". */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
+  -webkit-text-fill-color: #18181b;
+  transition: background-color 9999s ease-in-out 0s;
+}
