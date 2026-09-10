@@ -12,6 +12,7 @@ function makeController(
     getStats?: jest.Mock;
     getTrend?: jest.Mock;
     getStatsExtra?: jest.Mock;
+    getDetectionAnalysis?: jest.Mock;
     getSystemStatus?: jest.Mock;
   } = {},
 ) {
@@ -21,6 +22,7 @@ function makeController(
     getStats: jest.fn(),
     getTrend: jest.fn(),
     getStatsExtra: jest.fn(),
+    getDetectionAnalysis: jest.fn(),
     ...overrides,
   } as unknown as AdminService;
   const systemStatusService = {
@@ -236,6 +238,45 @@ describe('AdminController', () => {
     it('rejects an invalid days value', () => {
       const controller = makeController();
       expect(() => controller.getTrend('abc')).toThrow(BadRequestException);
+    });
+  });
+
+  describe('getDetectionAnalysis', () => {
+    it('defaults to 7 days when omitted', async () => {
+      const getDetectionAnalysis = jest.fn().mockResolvedValue({});
+      const controller = makeController({ getDetectionAnalysis });
+
+      await controller.getDetectionAnalysis();
+
+      expect(getDetectionAnalysis).toHaveBeenCalledWith(7);
+    });
+
+    it('parses a valid days value', async () => {
+      const getDetectionAnalysis = jest.fn().mockResolvedValue({});
+      const controller = makeController({ getDetectionAnalysis });
+
+      await controller.getDetectionAnalysis('30');
+
+      expect(getDetectionAnalysis).toHaveBeenCalledWith(30);
+    });
+
+    it('rejects days outside the 1..90 range', () => {
+      const controller = makeController();
+
+      expect(() => controller.getDetectionAnalysis('0')).toThrow(
+        BadRequestException,
+      );
+      expect(() => controller.getDetectionAnalysis('91')).toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('rejects a non-integer days value', () => {
+      const controller = makeController();
+
+      expect(() => controller.getDetectionAnalysis('invalid')).toThrow(
+        BadRequestException,
+      );
     });
   });
 

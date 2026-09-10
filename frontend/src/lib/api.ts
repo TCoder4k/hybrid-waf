@@ -84,6 +84,35 @@ export interface Me {
   username: string;
 }
 
+export interface ConfidenceBuckets {
+  "0.7-0.8": number;
+  "0.8-0.9": number;
+  "0.9-1.0": number;
+}
+
+export interface TopReasonItem {
+  reason: string;
+  count: number;
+}
+
+export interface TopEndpointItem {
+  endpoint: string;
+  count: number;
+}
+
+export interface DetectionAnalysisResult {
+  totalBlocked: number;
+  ruleOnlyCount: number;
+  mlOnlyCount: number;
+  bothCount: number;
+  unclassifiedCount: number;
+  ruleContributionCount: number;
+  mlContributionCount: number;
+  confidenceBuckets: ConfidenceBuckets;
+  topReasons: TopReasonItem[];
+  topEndpoints: TopEndpointItem[];
+}
+
 async function parseErrorMessage(res: Response): Promise<string> {
   try {
     const body = (await res.json()) as { message?: string };
@@ -198,3 +227,12 @@ export function getRecentEvents(
 ): Promise<SecurityEventListResult> {
   return getEvents({ page: 1, pageSize });
 }
+
+export function getDetectionAnalysis(
+  days?: number,
+): Promise<DetectionAnalysisResult> {
+  return authenticatedGet<DetectionAnalysisResult>(
+    `/admin/detection-analysis${days !== undefined ? `?days=${days}` : ""}`,
+  );
+}
+

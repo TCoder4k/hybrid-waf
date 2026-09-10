@@ -24,12 +24,14 @@ function makeSecurityEventRepository(
     findMany: jest.Mock;
     findById: jest.Mock;
     findDistinctSourceIps: jest.Mock;
+    findBlockedInRange: jest.Mock;
   }> = {},
 ): SecurityEventRepository {
   return {
     findMany: jest.fn(),
     findById: jest.fn(),
     findDistinctSourceIps: jest.fn().mockResolvedValue([]),
+    findBlockedInRange: jest.fn().mockResolvedValue([]),
     ...overrides,
   } as unknown as SecurityEventRepository;
 }
@@ -228,6 +230,61 @@ describe('AdminService', () => {
       );
 
       await expect(service.getStatsExtra()).rejects.toThrow(
+        ServiceUnavailableException,
+      );
+    });
+  });
+
+  describe('getDetectionAnalysis', () => {
+    it('queries blocked events in date range and aggregates results', async () => {
+      const blockedEvents = [
+        makeEvent({
+          id: 'ev-1',
+          ruleResult: { detected: true, reason: 'SQLi detected' },
+          mlResult: { classification: 'NORMAL' },
+          confidence: null,
+          method: 'GET',
+          endpoint: '/api/test',
+        }),
+        makeEvent({
+          id: 'ev-2',
+          ruleResult: { detected: false },
+          mlResult: { classification: 'SQL_INJECTION', reason: 'ML SQLi' },
+          confidence: 0.85,
+          method: 'POST',
+          endpoint: '/api/login',
+        }),
+      ];
+      const findBlockedInRange = jest.fn().mockResolvedValue(blockedEvents);
+      const service = new AdminService(
+        makeSecurityEventRepository({ findBlockedInRange }),
+        makeTrafficMetricRepository(),
+      );
+
+      const result = await service.getDetectionAnalysis(7);
+
+      expect(findBlockedInRange).toHaveBeenCalled();
+      expect(result.totalBlocked).toBe(2);
+      expect(result.ruleOnlyCount).toBe(1);
+      expect(result.mlOnlyCount).toBe(1);
+      expect(result.bothCount).toBe(0);
+      expect(result.confidenceBuckets['0.8-0.9']).toBe(1);
+      expect(result.topEndpoints).toEqual([
+        { endpoint: 'GET /api/test', count: 1 },
+        { endpoint: 'POST /api/login', count: 1 },
+      ]);
+    });
+
+    it('wraps a repository failure as ServiceUnavailableException', async () => {
+      const findBlockedInRange = jest
+        .fn()
+        .mockRejectedValue(new Error('DB connection refused'));
+      const service = new AdminService(
+        makeSecurityEventRepository({ findBlockedInRange }),
+        makeTrafficMetricRepository(),
+      );
+
+      await expect(service.getDetectionAnalysis(7)).rejects.toThrow(
         ServiceUnavailableException,
       );
     });

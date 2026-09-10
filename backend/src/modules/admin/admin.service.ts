@@ -18,6 +18,10 @@ import {
   AdminSecurityEvent,
   AdminSecurityEventListResult,
 } from './admin-event.dto';
+import {
+  aggregateDetectionAnalysis,
+  DetectionAnalysisResult,
+} from './detection-source.util';
 import { lookupCountry } from './geo-lookup.util';
 
 export interface AdminStatsExtra {
@@ -84,6 +88,21 @@ export class AdminService {
       return await this.trafficMetricRepository.getDailyTrend(
         daysToRange(days),
       );
+    } catch {
+      throw new ServiceUnavailableException('Database unavailable');
+    }
+  }
+
+  // Analyzes Rule Engine vs ML Engine contributions in blocked requests
+  // for the Detection Analysis page (BR-01 through BR-18).
+  async getDetectionAnalysis(days: number): Promise<DetectionAnalysisResult> {
+    try {
+      const range = daysToRange(days);
+      const events = await this.securityEventRepository.findBlockedInRange(
+        range.from,
+        range.to,
+      );
+      return aggregateDetectionAnalysis(events);
     } catch {
       throw new ServiceUnavailableException('Database unavailable');
     }

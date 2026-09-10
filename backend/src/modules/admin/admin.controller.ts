@@ -18,6 +18,7 @@ import {
   AdminSecurityEvent,
   AdminSecurityEventListResult,
 } from './admin-event.dto';
+import { DetectionAnalysisResult } from './detection-source.util';
 import { AdminService } from './admin.service';
 import type { AdminStatsExtra } from './admin.service';
 import { buildSystemInfo } from './system-info';
@@ -67,6 +68,16 @@ export class AdminController {
   @Get('stats/trend')
   getTrend(@Query('days') days?: string): Promise<TrendPoint[]> {
     return this.adminService.getTrend(
+      parseDaysOrDefault(days, DEFAULT_TREND_DAYS),
+    );
+  }
+
+  // Detection Analysis: Rule vs ML contributions, confidence buckets, top reasons, and endpoints.
+  @Get('detection-analysis')
+  getDetectionAnalysis(
+    @Query('days') days?: string,
+  ): Promise<DetectionAnalysisResult> {
+    return this.adminService.getDetectionAnalysis(
       parseDaysOrDefault(days, DEFAULT_TREND_DAYS),
     );
   }
