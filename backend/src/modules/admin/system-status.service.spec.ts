@@ -21,12 +21,12 @@ describe('SystemStatusService', () => {
     const queryRaw = jest.fn().mockResolvedValue([{ '?column?': 1 }]);
     const service = new SystemStatusService(makePrisma(queryRaw));
 
-    await expect(service.getStatus()).resolves.toEqual({
-      wafEngine: 'up',
-      mlService: 'up',
-      protectedApi: 'up',
-      database: 'up',
-    });
+    const status = await service.getStatus();
+    expect(status.wafEngine).toEqual({ status: 'up', latencyMs: null });
+    expect(status.mlService.status).toBe('up');
+    expect(status.protectedApi.status).toBe('up');
+    expect(status.database.status).toBe('up');
+    expect(status.checkedAt).toEqual(expect.any(String));
   });
 
   it('reports database down when $queryRaw throws, without affecting the other checks', async () => {
@@ -34,12 +34,11 @@ describe('SystemStatusService', () => {
     const queryRaw = jest.fn().mockRejectedValue(new Error('ECONNREFUSED'));
     const service = new SystemStatusService(makePrisma(queryRaw));
 
-    await expect(service.getStatus()).resolves.toEqual({
-      wafEngine: 'up',
-      mlService: 'up',
-      protectedApi: 'up',
-      database: 'down',
-    });
+    const status = await service.getStatus();
+    expect(status.wafEngine.status).toBe('up');
+    expect(status.mlService.status).toBe('up');
+    expect(status.protectedApi.status).toBe('up');
+    expect(status.database).toEqual({ status: 'down', latencyMs: null });
   });
 
   it('reports mlService down when its health ping fails, protectedApi unaffected', async () => {
@@ -51,12 +50,11 @@ describe('SystemStatusService', () => {
     const queryRaw = jest.fn().mockResolvedValue([{ '?column?': 1 }]);
     const service = new SystemStatusService(makePrisma(queryRaw));
 
-    await expect(service.getStatus()).resolves.toEqual({
-      wafEngine: 'up',
-      mlService: 'down',
-      protectedApi: 'up',
-      database: 'up',
-    });
+    const status = await service.getStatus();
+    expect(status.wafEngine.status).toBe('up');
+    expect(status.mlService.status).toBe('down');
+    expect(status.protectedApi.status).toBe('up');
+    expect(status.database.status).toBe('up');
   });
 
   it('wafEngine is always up (answering the request proves it)', async () => {
@@ -64,8 +62,7 @@ describe('SystemStatusService', () => {
     const queryRaw = jest.fn().mockRejectedValue(new Error('down'));
     const service = new SystemStatusService(makePrisma(queryRaw));
 
-    await expect(service.getStatus()).resolves.toEqual(
-      expect.objectContaining({ wafEngine: 'up' }),
-    );
+    const status = await service.getStatus();
+    expect(status.wafEngine.status).toBe('up');
   });
 });

@@ -2,6 +2,11 @@ const HEALTH_CHECK_TIMEOUT_MS = 1500;
 
 export type ComponentStatus = 'up' | 'down';
 
+export interface HealthPingResult {
+  status: ComponentStatus;
+  latencyMs: number | null;
+}
+
 // Pings `${baseUrl}/health` with a short timeout — reuses the same
 // AbortController + setTimeout pattern MLDetectionEngine.detect() already
 // uses for ml-service calls, factored out here so the ml-service and
@@ -9,17 +14,21 @@ export type ComponentStatus = 'up' | 'down';
 // implementation. Never throws: any failure (timeout, connection refused,
 // non-2xx) is reported as 'down', which is itself a valid answer for
 // system-status, not an error condition.
-export async function pingHealth(baseUrl: string): Promise<ComponentStatus> {
+export async function pingHealth(baseUrl: string): Promise<HealthPingResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS);
+  const startedAt = Date.now();
 
   try {
     const response = await fetch(`${baseUrl}/health`, {
       signal: controller.signal,
     });
-    return response.ok ? 'up' : 'down';
+    return {
+      status: response.ok ? 'up' : 'down',
+      latencyMs: Date.now() - startedAt,
+    };
   } catch {
-    return 'down';
+    return { status: 'down', latencyMs: null };
   } finally {
     clearTimeout(timeout);
   }

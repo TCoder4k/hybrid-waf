@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcryptjs';
 import { Admin } from '@prisma/client';
 import { AdminRepository } from './admin.repository';
 import { AuthService } from './auth.service';
@@ -72,5 +73,41 @@ describe('AuthService', () => {
     await expect(service.login('alice', KNOWN_PASSWORD)).rejects.toThrow(
       ServiceUnavailableException,
     );
+  });
+
+  it('changes the password after verifying the current password', async () => {
+    const findByUsername = jest.fn();
+    const updatePassword = jest.fn().mockResolvedValue(makeAdmin());
+    const findById = jest.fn().mockResolvedValue(makeAdmin());
+    const adminRepository = {
+      findByUsername,
+      findById,
+      updatePassword,
+    } as unknown as AdminRepository;
+    const jwtService = { signAsync: jest.fn() } as unknown as JwtService;
+    const service = new AuthService(adminRepository, jwtService);
+
+    await service.changePassword('admin-1', KNOWN_PASSWORD, 'new-password');
+
+    expect(updatePassword).toHaveBeenCalledWith('admin-1', expect.any(String));
+    const [, hash] = updatePassword.mock.calls[0] as [string, string];
+    await expect(bcrypt.compare('new-password', hash)).resolves.toBe(true);
+  });
+
+  it('rejects a password change when the current password is wrong', async () => {
+    const findById = jest.fn().mockResolvedValue(makeAdmin());
+    const updatePassword = jest.fn();
+    const adminRepository = {
+      findById,
+      updatePassword,
+    } as unknown as AdminRepository;
+    const service = new AuthService(adminRepository, {
+      signAsync: jest.fn(),
+    } as unknown as JwtService);
+
+    await expect(
+      service.changePassword('admin-1', 'wrong-password', 'new-password'),
+    ).rejects.toThrow(UnauthorizedException);
+    expect(updatePassword).not.toHaveBeenCalled();
   });
 });

@@ -13,6 +13,7 @@ function makeController(
     getTrend?: jest.Mock;
     getStatsExtra?: jest.Mock;
     getSystemStatus?: jest.Mock;
+    changePassword?: jest.Mock;
   } = {},
 ) {
   const adminService = {
@@ -26,7 +27,10 @@ function makeController(
   const systemStatusService = {
     getStatus: overrides.getSystemStatus ?? jest.fn(),
   } as unknown as SystemStatusService;
-  return new AdminController(adminService, systemStatusService);
+  const authService = {
+    changePassword: overrides.changePassword ?? jest.fn(),
+  } as never;
+  return new AdminController(adminService, systemStatusService, authService);
 }
 
 describe('AdminController', () => {
@@ -296,6 +300,39 @@ describe('AdminController', () => {
       const req = {} as unknown as Request & { admin?: JwtPayload };
 
       expect(controller.getMe(req)).toEqual({ username: '' });
+    });
+  });
+
+  describe('changePassword', () => {
+    it('delegates valid data to AuthService', async () => {
+      const changePassword = jest.fn().mockResolvedValue(undefined);
+      const controller = makeController({ changePassword });
+      const req = {
+        admin: { sub: 'admin-1', username: 'alice' },
+      } as unknown as Request & { admin?: JwtPayload };
+
+      await controller.changePassword(req, {
+        currentPassword: 'old-password',
+        newPassword: 'new-password',
+      });
+
+      expect(changePassword).toHaveBeenCalledWith(
+        'admin-1',
+        'old-password',
+        'new-password',
+      );
+    });
+
+    it('rejects a new password shorter than eight characters', async () => {
+      const controller = makeController();
+      const req = {} as unknown as Request & { admin?: JwtPayload };
+
+      await expect(
+        controller.changePassword(req, {
+          currentPassword: 'old-password',
+          newPassword: 'short',
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

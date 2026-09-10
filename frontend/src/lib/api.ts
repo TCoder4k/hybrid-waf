@@ -60,11 +60,17 @@ export interface TrendPoint {
 
 export type ComponentStatus = "up" | "down";
 
+export interface SystemComponentStatus {
+  status: ComponentStatus;
+  latencyMs: number | null;
+}
+
 export interface SystemStatus {
-  wafEngine: "up";
-  mlService: ComponentStatus;
-  database: ComponentStatus;
-  protectedApi: ComponentStatus;
+  wafEngine: SystemComponentStatus;
+  mlService: SystemComponentStatus;
+  database: SystemComponentStatus;
+  protectedApi: SystemComponentStatus;
+  checkedAt: string;
 }
 
 export interface SystemInfo {
@@ -72,6 +78,7 @@ export interface SystemInfo {
   environment: string;
   uptimeSeconds: number;
   serverTime: string; // ISO 8601
+  mlConfidenceThreshold: number;
 }
 
 export interface AdminStatsExtra {
@@ -131,6 +138,36 @@ async function authenticatedGet<T>(path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
+async function authenticatedPatch<T>(
+  path: string,
+  body: unknown,
+): Promise<T> {
+  const token = getToken();
+  if (!token) {
+    throw new ApiError(401, "Not logged in");
+  }
+
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: "PATCH",
+    headers: {
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (res.status === 401) {
+    clearToken();
+  }
+  if (!res.ok) {
+    throw new ApiError(res.status, await parseErrorMessage(res));
+  }
+  if (res.status === 204) {
+    return undefined as T;
+  }
+  return (await res.json()) as T;
+}
+
 // `days` omitted -> all-time totals (Phase 10's original behavior).
 export function getStats(days?: number): Promise<TrafficStats> {
   return authenticatedGet<TrafficStats>(
@@ -158,6 +195,16 @@ export function getSystemInfo(): Promise<SystemInfo> {
 
 export function getMe(): Promise<Me> {
   return authenticatedGet<Me>("/admin/me");
+}
+
+export function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  return authenticatedPatch<void>("/admin/password", {
+    currentPassword,
+    newPassword,
+  });
 }
 
 export interface EventListFilter {

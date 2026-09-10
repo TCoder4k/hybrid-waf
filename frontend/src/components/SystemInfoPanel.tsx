@@ -29,6 +29,10 @@ export function SystemInfoPanel({ info }: SystemInfoPanelProps) {
           label="Giờ hệ thống"
           value={formatHeaderTimestamp(new Date(info.serverTime))}
         />
+        <InfoRow
+          label="Ngưỡng ML"
+          value={info.mlConfidenceThreshold.toFixed(2)}
+        />
       </div>
     </Card>
   );

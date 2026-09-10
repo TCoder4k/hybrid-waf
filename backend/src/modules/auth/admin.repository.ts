@@ -14,4 +14,15 @@ export class AdminRepository {
   findByUsername(username: string): Promise<Admin | null> {
     return this.prisma.admin.findUnique({ where: { username } });
   }
+
+  findById(id: string): Promise<Admin | null> {
+    return this.prisma.admin.findUnique({ where: { id } });
+  }
+
+  updatePassword(id: string, passwordHash: string): Promise<Admin> {
+    return this.prisma.admin.update({
+      where: { id },
+      data: { passwordHash },
+    });
+  }
 }

@@ -10,18 +10,25 @@ describe('pingHealth', () => {
   it('returns "up" when the health endpoint responds 2xx', async () => {
     global.fetch = jest.fn().mockResolvedValue({ ok: true });
 
-    await expect(pingHealth('http://service.test')).resolves.toBe('up');
+    await expect(pingHealth('http://service.test')).resolves.toEqual(
+      expect.objectContaining({ status: 'up' }),
+    );
   });
 
   it('returns "down" when the health endpoint responds non-2xx', async () => {
     global.fetch = jest.fn().mockResolvedValue({ ok: false });
 
-    await expect(pingHealth('http://service.test')).resolves.toBe('down');
+    await expect(pingHealth('http://service.test')).resolves.toEqual(
+      expect.objectContaining({ status: 'down' }),
+    );
   });
 
   it('returns "down" — never throws — when fetch rejects', async () => {
     global.fetch = jest.fn().mockRejectedValue(new Error('ECONNREFUSED'));
 
-    await expect(pingHealth('http://service.test')).resolves.toBe('down');
+    await expect(pingHealth('http://service.test')).resolves.toEqual({
+      status: 'down',
+      latencyMs: null,
+    });
   });
 });
