@@ -231,17 +231,53 @@ describe('detection-source.util', () => {
       expect(result.mlContributionCount).toBe(3); // 1 mlOnly + 2 both
     });
 
-    it('handles confidence buckets according to BR-10 and BR-11 exact boundaries', () => {
+    it('handles confidence buckets according to BR-10 and BR-11 exact boundaries, only for ML-detecting sources (ML or BOTH)', () => {
       const events: SecurityEventLike[] = [
-        { confidence: 0.72 }, // -> '0.7-0.8'
-        { confidence: 0.8 }, // -> '0.8-0.9'
-        { confidence: 0.89 }, // -> '0.8-0.9'
-        { confidence: 0.9 }, // -> '0.9-1.0'
-        { confidence: 1.0 }, // -> '0.9-1.0'
-        { confidence: 0.69 }, // < 0.7 -> ignored
-        { confidence: 1.05 }, // > 1.0 -> ignored
-        { confidence: null }, // ignored
-        { confidence: NaN }, // ignored
+        // ML-only, confidence 0.72 -> '0.7-0.8'
+        {
+          ruleResult: { detected: false },
+          mlResult: { classification: 'SQL_INJECTION', confidence: 0.72 },
+        },
+        // BOTH, confidence 0.8 -> '0.8-0.9'
+        {
+          ruleResult: { detected: true },
+          mlResult: { classification: 'XSS', confidence: 0.8 },
+        },
+        // ML-only, confidence 0.89 -> '0.8-0.9'
+        {
+          ruleResult: { detected: false },
+          mlResult: { classification: 'XSS', confidence: 0.89 },
+        },
+        // BOTH, confidence 0.9 -> '0.9-1.0'
+        {
+          ruleResult: { detected: true },
+          mlResult: { classification: 'SQL_INJECTION', confidence: 0.9 },
+        },
+        // ML-only, confidence 1.0 -> '0.9-1.0'
+        {
+          ruleResult: { detected: false },
+          mlResult: { classification: 'SQL_INJECTION', confidence: 1.0 },
+        },
+        // ML-only, confidence 0.69 -> < 0.7 -> ignored
+        {
+          ruleResult: { detected: false },
+          mlResult: { classification: 'XSS', confidence: 0.69 },
+        },
+        // ML-only, confidence 1.05 -> > 1.0 -> ignored
+        {
+          ruleResult: { detected: false },
+          mlResult: { classification: 'XSS', confidence: 1.05 },
+        },
+        // ML-only, confidence null -> ignored
+        {
+          ruleResult: { detected: false },
+          mlResult: { classification: 'XSS', confidence: null },
+        },
+        // ML-only, confidence NaN -> ignored
+        {
+          ruleResult: { detected: false },
+          mlResult: { classification: 'XSS', confidence: NaN },
+        },
       ];
 
       const result = aggregateDetectionAnalysis(events);
@@ -249,6 +285,27 @@ describe('detection-source.util', () => {
       expect(result.confidenceBuckets['0.7-0.8']).toBe(1);
       expect(result.confidenceBuckets['0.8-0.9']).toBe(2);
       expect(result.confidenceBuckets['0.9-1.0']).toBe(2);
+    });
+
+    it('excludes RULE-only detections from confidence buckets even when ML carries a high confidence for a NORMAL classification', () => {
+      const events: SecurityEventLike[] = [
+        // RULE-only: Rule detected the attack, but ML classified it NORMAL
+        // (disagreeing / not detecting) while still carrying a high numeric
+        // confidence for that NORMAL call. This must NOT be bucketed, since
+        // ML was not a detecting source for this event.
+        {
+          ruleResult: { detected: true },
+          mlResult: { classification: 'NORMAL', confidence: 0.95 },
+          confidence: 0.95,
+        },
+      ];
+
+      const result = aggregateDetectionAnalysis(events);
+
+      expect(result.ruleOnlyCount).toBe(1);
+      expect(result.confidenceBuckets['0.7-0.8']).toBe(0);
+      expect(result.confidenceBuckets['0.8-0.9']).toBe(0);
+      expect(result.confidenceBuckets['0.9-1.0']).toBe(0);
     });
 
     it('aggregates topReasons: exact string grouping, sorted DESC, max 10', () => {

@@ -15,11 +15,16 @@ import {
   Target,
 } from "lucide-react";
 import {
+  Bar,
+  BarChart,
+  CartesianGrid,
   Cell,
   Pie,
   PieChart,
   ResponsiveContainer,
   Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
 import {
   ApiError,
@@ -163,6 +168,15 @@ function AnalysisContent({
     { name: "Both (Cả hai)", value: data.bothCount, color: BOTH_COLOR },
   ].filter((d) => d.value > 0);
 
+  // Detection Source breakdown data for the comparison bar chart
+  // (same 3 mutually-exclusive metrics as pieData, unfiltered so all 3
+  // categories always render even when a count is 0)
+  const barData = [
+    { name: "Rule-only", value: data.ruleOnlyCount, color: RULE_COLOR },
+    { name: "ML-only", value: data.mlOnlyCount, color: ML_COLOR },
+    { name: "Both", value: data.bothCount, color: BOTH_COLOR },
+  ];
+
   // Engine participation percentages relative to total blocked
   const rulePartPct = total > 0 ? ((data.ruleContributionCount / total) * 100).toFixed(1) : "0.0";
   const mlPartPct = total > 0 ? ((data.mlContributionCount / total) * 100).toFixed(1) : "0.0";
@@ -295,37 +309,46 @@ function AnalysisContent({
 
           <div className="flex flex-col gap-4 lg:col-span-8">
             <div className="text-xs font-medium text-zinc-500">
-              Tỷ trọng tích lũy nguồn phát hiện:
+              So sánh số lượng theo nguồn phát hiện:
             </div>
-            {/* Stacked segmented bar */}
-            <div className="flex h-6 w-full overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
-              {data.ruleOnlyCount > 0 && (
-                <div
-                  style={{ width: `${(data.ruleOnlyCount / total) * 100}%` }}
-                  className="flex items-center justify-center bg-blue-500 text-[11px] font-semibold text-white transition-all"
-                  title={`Rule-only: ${data.ruleOnlyCount} (${pct(data.ruleOnlyCount, total)})`}
+            {/* Comparison bar chart (Rule-only / ML-only / Both) */}
+            <div className="h-40 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={barData}
+                  margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
                 >
-                  {data.ruleOnlyCount / total > 0.08 ? `${pct(data.ruleOnlyCount, total)}` : ""}
-                </div>
-              )}
-              {data.bothCount > 0 && (
-                <div
-                  style={{ width: `${(data.bothCount / total) * 100}%` }}
-                  className="flex items-center justify-center bg-purple-500 text-[11px] font-semibold text-white transition-all"
-                  title={`Both: ${data.bothCount} (${pct(data.bothCount, total)})`}
-                >
-                  {data.bothCount / total > 0.08 ? `${pct(data.bothCount, total)}` : ""}
-                </div>
-              )}
-              {data.mlOnlyCount > 0 && (
-                <div
-                  style={{ width: `${(data.mlOnlyCount / total) * 100}%` }}
-                  className="flex items-center justify-center bg-emerald-500 text-[11px] font-semibold text-white transition-all"
-                  title={`ML-only: ${data.mlOnlyCount} (${pct(data.mlOnlyCount, total)})`}
-                >
-                  {data.mlOnlyCount / total > 0.08 ? `${pct(data.mlOnlyCount, total)}` : ""}
-                </div>
-              )}
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    className="stroke-zinc-200 dark:stroke-zinc-800"
+                  />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 11 }}
+                    tickLine={false}
+                    className="fill-zinc-500"
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 11 }}
+                    tickLine={false}
+                    className="fill-zinc-500"
+                  />
+                  <Tooltip
+                    formatter={(val) => [
+                      `${val ?? 0} sự kiện (${pct(Number(val ?? 0), total)})`,
+                      "",
+                    ]}
+                    cursor={{ fill: "rgba(148, 163, 184, 0.12)" }}
+                  />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                    {barData.map((entry) => (
+                      <Cell key={entry.name} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
 
             {/* Legend info */}

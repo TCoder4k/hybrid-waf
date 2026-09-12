@@ -1,13 +1,13 @@
 import { Calendar } from "lucide-react";
 
-export type DateRangeDays = 7 | 14 | 30 | 60 | 90;
+export type DateRangeDays = 7 | 14 | 30;
 
 interface DateRangeSelectorProps {
   value: DateRangeDays;
   onChange: (days: DateRangeDays) => void;
 }
 
-// A styled native <select> — fixed options, which doesn't justify
+// A styled native <select> — only 3 fixed options, which doesn't justify
 // pulling in a headless-menu dependency, and a native <select> gets
 // keyboard/screen-reader accessibility for free.
 export function DateRangeSelector({ value, onChange }: DateRangeSelectorProps) {
@@ -22,8 +22,6 @@ export function DateRangeSelector({ value, onChange }: DateRangeSelectorProps) {
         <option value={7}>7 ngày qua</option>
         <option value={14}>14 ngày qua</option>
         <option value={30}>30 ngày qua</option>
-        <option value={60}>60 ngày qua</option>
-        <option value={90}>90 ngày qua</option>
       </select>
     </label>
   );

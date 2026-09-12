@@ -215,19 +215,29 @@ export function aggregateDetectionAnalysis(
     }
 
     // Confidence buckets: 0.7 <= c < 0.8, 0.8 <= c < 0.9, 0.9 <= c <= 1.0
-    const rawConf =
-      event.confidence ??
-      (event.mlResult as Record<string, unknown> | null | undefined)
-        ?.confidence;
-    if (typeof rawConf === 'number' && !Number.isNaN(rawConf)) {
-      if (rawConf >= 0.7 && rawConf < 0.8) {
-        confidenceBuckets['0.7-0.8']++;
-      } else if (rawConf >= 0.8 && rawConf < 0.9) {
-        confidenceBuckets['0.8-0.9']++;
-      } else if (rawConf >= 0.9 && rawConf <= 1.0) {
-        confidenceBuckets['0.9-1.0']++;
+    // Limitations of this aggregation:
+    // (a) it only ever runs over BLOCKED events (the route only reads
+    //     blocked/BLOCK-decision SecurityEvent rows), never ALLOWed traffic;
+    // (b) confidence buckets only include events where ML was a detecting
+    //     source (source === 'ML' || 'BOTH') — a RULE-only event can still
+    //     carry a numeric mlResult.confidence for a NORMAL classification
+    //     (ML disagreeing/not detecting), and that must not count toward
+    //     "ML Engine confidence in its detections".
+    if (source === 'ML' || source === 'BOTH') {
+      const rawConf =
+        event.confidence ??
+        (event.mlResult as Record<string, unknown> | null | undefined)
+          ?.confidence;
+      if (typeof rawConf === 'number' && !Number.isNaN(rawConf)) {
+        if (rawConf >= 0.7 && rawConf < 0.8) {
+          confidenceBuckets['0.7-0.8']++;
+        } else if (rawConf >= 0.8 && rawConf < 0.9) {
+          confidenceBuckets['0.8-0.9']++;
+        } else if (rawConf >= 0.9 && rawConf <= 1.0) {
+          confidenceBuckets['0.9-1.0']++;
+        }
+        // Confidence < 0.7 or > 1.0 ignored per BR-11
       }
-      // Confidence < 0.7 or > 1.0 ignored per BR-11
     }
 
     // Reason frequency
