@@ -141,7 +141,9 @@ async function authenticatedGet<T>(path: string): Promise<T> {
 async function authenticatedPatch<T>(
   path: string,
   body: unknown,
+  options: { clearTokenOn401?: boolean } = {},
 ): Promise<T> {
+  const { clearTokenOn401 = true } = options;
   const token = getToken();
   if (!token) {
     throw new ApiError(401, "Not logged in");
@@ -156,7 +158,7 @@ async function authenticatedPatch<T>(
     body: JSON.stringify(body),
   });
 
-  if (res.status === 401) {
+  if (res.status === 401 && clearTokenOn401) {
     clearToken();
   }
   if (!res.ok) {
@@ -201,10 +203,11 @@ export function changePassword(
   currentPassword: string,
   newPassword: string,
 ): Promise<void> {
-  return authenticatedPatch<void>("/admin/password", {
-    currentPassword,
-    newPassword,
-  });
+  return authenticatedPatch<void>(
+    "/admin/password",
+    { currentPassword, newPassword },
+    { clearTokenOn401: false },
+  );
 }
 
 export interface EventListFilter {
