@@ -23,4 +23,13 @@ describe('buildSystemInfo', () => {
     expect(info.uptimeSeconds).toBeGreaterThanOrEqual(0);
     expect(Number.isNaN(new Date(info.serverTime).getTime())).toBe(false);
   });
+
+  it('reports the configured ML confidence threshold', () => {
+    const original = process.env.ML_CONFIDENCE_THRESHOLD;
+    process.env.ML_CONFIDENCE_THRESHOLD = '0.85';
+
+    expect(buildSystemInfo().mlConfidenceThreshold).toBe(0.85);
+
+    process.env.ML_CONFIDENCE_THRESHOLD = original;
+  });
 });

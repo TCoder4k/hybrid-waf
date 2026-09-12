@@ -1,11 +1,13 @@
 import type { SystemStatus } from "@/lib/api";
 import { Card } from "@/components/Card";
 
+type SystemComponentKey = Exclude<keyof SystemStatus, "checkedAt">;
+
 interface SystemStatusPanelProps {
   status: SystemStatus;
 }
 
-const ROWS: { key: keyof SystemStatus; label: string }[] = [
+const ROWS: { key: SystemComponentKey; label: string }[] = [
   { key: "wafEngine", label: "WAF Engine" },
   { key: "mlService", label: "ML Service" },
   { key: "database", label: "Database" },
@@ -20,7 +22,8 @@ export function SystemStatusPanel({ status }: SystemStatusPanelProps) {
       </h2>
       <div className="flex flex-col divide-y divide-black/[.05] dark:divide-white/[.08]">
         {ROWS.map((row) => {
-          const up = status[row.key] === "up";
+          const component = status[row.key];
+          const up = component.status === "up";
           return (
             <div
               key={row.key}
@@ -32,14 +35,21 @@ export function SystemStatusPanel({ status }: SystemStatusPanelProps) {
                 />
                 {row.label}
               </span>
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+              <span className="flex items-center gap-2">
+                <span className="text-xs text-zinc-500">
+                  {component.latencyMs === null
+                    ? "latency —"
+                    : `${component.latencyMs} ms`}
+                </span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                   up
                     ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300"
                     : "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300"
-                }`}
-              >
-                {up ? "Hoạt động" : "Ngừng hoạt động"}
+                  }`}
+                >
+                  {up ? "Hoạt động" : "Ngừng hoạt động"}
+                </span>
               </span>
             </div>
           );

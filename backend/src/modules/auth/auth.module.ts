@@ -24,6 +24,6 @@ const jwtModule = JwtModule.register({
   imports: [DatabaseModule, jwtModule],
   controllers: [AuthController],
   providers: [AdminRepository, AuthService, JwtAuthGuard],
-  exports: [AdminRepository, JwtAuthGuard, jwtModule],
+  exports: [AdminRepository, AuthService, JwtAuthGuard, jwtModule],
 })
 export class AuthModule {}

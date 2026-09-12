@@ -32,6 +32,7 @@ const sampleEvent = {
 describe('Admin Auth + API (e2e)', () => {
   let app: INestApplication<App>;
   const adminFindUnique = jest.fn();
+  const adminUpdate = jest.fn();
   const securityEventFindMany = jest.fn();
   const securityEventCount = jest.fn();
   const securityEventFindUnique = jest.fn();
@@ -42,11 +43,11 @@ describe('Admin Auth + API (e2e)', () => {
   const originalFetch = global.fetch;
 
   beforeAll(async () => {
-    const passwordHash = await bcrypt.hash(KNOWN_PASSWORD, 10);
+    let passwordHash = await bcrypt.hash(KNOWN_PASSWORD, 10);
     adminFindUnique.mockImplementation(
-      ({ where: { username } }: { where: { username: string } }) =>
+      ({ where }: { where: { username?: string; id?: string } }) =>
         Promise.resolve(
-          username === KNOWN_USERNAME
+          where.username === KNOWN_USERNAME || where.id === 'admin-1'
             ? {
                 id: 'admin-1',
                 username: KNOWN_USERNAME,
@@ -55,6 +56,17 @@ describe('Admin Auth + API (e2e)', () => {
               }
             : null,
         ),
+    );
+    adminUpdate.mockImplementation(
+      ({ data }: { data: { passwordHash: string } }) => {
+        passwordHash = data.passwordHash;
+        return Promise.resolve({
+          id: 'admin-1',
+          username: KNOWN_USERNAME,
+          passwordHash,
+          createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        });
+      },
     );
     securityEventFindMany.mockResolvedValue([sampleEvent]);
     securityEventCount.mockResolvedValue(1);
@@ -78,7 +90,7 @@ describe('Admin Auth + API (e2e)', () => {
     const fakePrismaService = {
       onModuleInit: jest.fn().mockResolvedValue(undefined),
       onModuleDestroy: jest.fn().mockResolvedValue(undefined),
-      admin: { findUnique: adminFindUnique },
+      admin: { findUnique: adminFindUnique, update: adminUpdate },
       securityEvent: {
         findMany: securityEventFindMany,
         count: securityEventCount,
@@ -476,12 +488,21 @@ describe('Admin Auth + API (e2e)', () => {
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({
-        wafEngine: 'up',
-        mlService: 'up',
-        protectedApi: 'up',
-        database: 'up',
-      });
+      const body = res.body as {
+        wafEngine: { status: string; latencyMs: number | null };
+        mlService: { status: string; latencyMs: number | null };
+        protectedApi: { status: string; latencyMs: number | null };
+        database: { status: string; latencyMs: number | null };
+        checkedAt: string;
+      };
+      expect(body.wafEngine).toEqual({ status: 'up', latencyMs: null });
+      expect(body.mlService.status).toBe('up');
+      expect(body.mlService.latencyMs).toEqual(expect.any(Number));
+      expect(body.protectedApi.status).toBe('up');
+      expect(body.protectedApi.latencyMs).toEqual(expect.any(Number));
+      expect(body.database.status).toBe('up');
+      expect(body.database.latencyMs).toEqual(expect.any(Number));
+      expect(body.checkedAt).toEqual(expect.any(String));
     });
 
     it('returns 200 (not 503) with database "down" when the DB is unreachable', async () => {
@@ -493,7 +514,9 @@ describe('Admin Auth + API (e2e)', () => {
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);
-      expect((res.body as { database: string }).database).toBe('down');
+      expect(
+        (res.body as { database: { status: string } }).database.status,
+      ).toBe('down');
     });
   });
 
@@ -520,6 +543,10 @@ describe('Admin Auth + API (e2e)', () => {
       expect(typeof body.version).toBe('string');
       expect(typeof body.environment).toBe('string');
       expect(typeof body.uptimeSeconds).toBe('number');
+      expect(
+        typeof (body as typeof body & { mlConfidenceThreshold: number })
+          .mlConfidenceThreshold,
+      ).toBe('number');
       expect(Number.isNaN(new Date(body.serverTime).getTime())).toBe(false);
     });
   });
@@ -539,6 +566,54 @@ describe('Admin Auth + API (e2e)', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ username: KNOWN_USERNAME });
+    });
+  });
+
+  describe('PATCH /admin/password', () => {
+    it('requires authentication', async () => {
+      const res = await request(app.getHttpServer())
+        .patch('/admin/password')
+        .send({
+          currentPassword: KNOWN_PASSWORD,
+          newPassword: 'new-password-123',
+        });
+
+      expect(res.status).toBe(401);
+    });
+
+    it('rejects a short new password', async () => {
+      const token = await login();
+      const res = await request(app.getHttpServer())
+        .patch('/admin/password')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ currentPassword: KNOWN_PASSWORD, newPassword: 'short' });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('changes the password and accepts the new password on login', async () => {
+      const token = await login();
+      const newPassword = 'new-password-123';
+      const change = await request(app.getHttpServer())
+        .patch('/admin/password')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ currentPassword: KNOWN_PASSWORD, newPassword });
+
+      expect(change.status).toBe(204);
+
+      const newLogin = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ username: KNOWN_USERNAME, password: newPassword });
+      expect(newLogin.status).toBe(200);
+
+      const oldLogin = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ username: KNOWN_USERNAME, password: KNOWN_PASSWORD });
+      expect(oldLogin.status).toBe(401);
+
+      await adminUpdate({
+        data: { passwordHash: await bcrypt.hash(KNOWN_PASSWORD, 10) },
+      });
     });
   });
 });

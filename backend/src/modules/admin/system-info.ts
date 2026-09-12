@@ -8,6 +8,7 @@ export interface SystemInfo {
   environment: string;
   uptimeSeconds: number;
   serverTime: string; // ISO 8601
+  mlConfidenceThreshold: number;
 }
 
 // A plain function, not an injectable service — nothing here needs DI
@@ -15,10 +16,14 @@ export interface SystemInfo {
 // every call (not cached at module load) so `uptimeSeconds`/`serverTime`
 // are always current.
 export function buildSystemInfo(): SystemInfo {
+  const configuredThreshold = Number(process.env.ML_CONFIDENCE_THRESHOLD);
   return {
     version,
     environment: process.env.NODE_ENV ?? 'development',
     uptimeSeconds: Math.floor(process.uptime()),
     serverTime: new Date().toISOString(),
+    mlConfidenceThreshold: Number.isFinite(configuredThreshold)
+      ? configuredThreshold
+      : 0.7,
   };
 }

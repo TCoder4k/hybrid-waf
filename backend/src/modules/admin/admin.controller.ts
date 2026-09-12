@@ -1,7 +1,11 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
+  Patch,
   Param,
   Query,
   Req,
@@ -9,7 +13,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { daysToRange } from '../../common/date-range.util';
-import { JwtPayload } from '../auth/auth.service';
+import { AuthService, JwtPayload } from '../auth/auth.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SecurityEventListFilter } from '../security-events/security-event.repository';
 import { TrendPoint } from '../traffic-metrics/trend.util';
@@ -39,6 +43,7 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly systemStatusService: SystemStatusService,
+    private readonly authService: AuthService,
   ) {}
 
   @Get('events')
@@ -95,6 +100,20 @@ export class AdminController {
     return buildSystemInfo();
   }
 
+  @Patch('password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async changePassword(
+    @Req() req: Request & { admin?: JwtPayload },
+    @Body() body: unknown,
+  ): Promise<void> {
+    const { currentPassword, newPassword } = parsePasswordBody(body);
+    await this.authService.changePassword(
+      req.admin?.sub ?? '',
+      currentPassword,
+      newPassword,
+    );
+  }
+
   // "Who am I" for the Header's username display — decoded straight from
   // the already-verified JWT the guard attached to the request, no new DB
   // read, stays stateless per ADR-5.
@@ -102,6 +121,29 @@ export class AdminController {
   getMe(@Req() req: Request & { admin?: JwtPayload }): { username: string } {
     return { username: req.admin?.username ?? '' };
   }
+}
+
+function parsePasswordBody(body: unknown): {
+  currentPassword: string;
+  newPassword: string;
+} {
+  const record = (body ?? {}) as Record<string, unknown>;
+  if (
+    typeof record.currentPassword !== 'string' ||
+    typeof record.newPassword !== 'string' ||
+    record.currentPassword.length === 0
+  ) {
+    throw new BadRequestException(
+      'currentPassword and newPassword are required',
+    );
+  }
+  if (record.newPassword.length < 8) {
+    throw new BadRequestException('newPassword must be at least 8 characters');
+  }
+  return {
+    currentPassword: record.currentPassword,
+    newPassword: record.newPassword,
+  };
 }
 
 function parseListFilter(

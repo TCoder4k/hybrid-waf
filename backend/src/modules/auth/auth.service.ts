@@ -54,4 +54,21 @@ export class AuthService {
     const accessToken = await this.jwtService.signAsync(payload);
     return { accessToken };
   }
+
+  async changePassword(
+    adminId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    const admin = await this.adminRepository.findById(adminId);
+    if (
+      !admin ||
+      !(await bcrypt.compare(currentPassword, admin.passwordHash))
+    ) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.adminRepository.updatePassword(adminId, passwordHash);
+  }
 }

@@ -2,11 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ComponentStatus, pingHealth } from './health-ping.util';
 
+export interface SystemComponentStatus {
+  status: ComponentStatus;
+  latencyMs: number | null;
+}
+
 export interface SystemStatus {
-  wafEngine: 'up';
-  mlService: ComponentStatus;
-  database: ComponentStatus;
-  protectedApi: ComponentStatus;
+  wafEngine: SystemComponentStatus;
+  mlService: SystemComponentStatus;
+  database: SystemComponentStatus;
+  protectedApi: SystemComponentStatus;
+  checkedAt: string;
 }
 
 // GET /admin/system-status's data source. Deliberately never throws —
@@ -25,17 +31,23 @@ export class SystemStatusService {
       this.pingDatabase(),
     ]);
 
-    // Answering this request at all already proves the WAF engine (this
-    // process) is up — no separate check needed.
-    return { wafEngine: 'up', mlService, protectedApi, database };
+    // Answering this request at all already proves the WAF engine is up.
+    return {
+      wafEngine: { status: 'up', latencyMs: null },
+      mlService,
+      protectedApi,
+      database,
+      checkedAt: new Date().toISOString(),
+    };
   }
 
-  private async pingDatabase(): Promise<ComponentStatus> {
+  private async pingDatabase(): Promise<SystemComponentStatus> {
+    const startedAt = Date.now();
     try {
       await this.prisma.$queryRaw`SELECT 1`;
-      return 'up';
+      return { status: 'up', latencyMs: Date.now() - startedAt };
     } catch {
-      return 'down';
+      return { status: 'down', latencyMs: null };
     }
   }
 }
