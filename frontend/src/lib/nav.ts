@@ -22,7 +22,6 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Tổng quan", icon: Home },
   { href: "/events", label: "Sự kiện bảo mật", icon: Shield },
   { href: "/statistics", label: "Thống kê chi tiết", icon: BarChart3 },
-  { href: "/reports", label: "Biểu đồ & Báo cáo", icon: TrendingUp },
   { href: "/system", label: "Quản lý hệ thống", icon: SlidersHorizontal },
   { href: "/settings", label: "Cài đặt", icon: Settings },
 ];

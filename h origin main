@@ -1,0 +1,15 @@
+*   [33m2c50686[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Merge remote-tracking branch 'origin/linh'
+[31m|[m[32m\[m  
+[31m|[m * [33mb2f4a33[m[33m ([m[1;31morigin/linh[m[33m, [m[1;32mlinh[m[33m)[m fix: address review feedback for detection analysis
+[31m|[m * [33m697b3cf[m statistics
+* [32m|[m   [33me115b39[m merge: integrate system management and settings
+[32m|[m[34m\[m [32m\[m  
+[32m|[m [34m|[m[32m/[m  
+[32m|[m[32m/[m[34m|[m   
+[32m|[m * [33m802541b[m[33m ([m[1;31morigin/tung[m[33m, [m[1;32mtung[m[33m)[m fix: keep admin session on invalid current password
+[32m|[m * [33m7e460aa[m Implement system management and admin settings
+[32m|[m[32m/[m  
+* [33m9954e33[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mworktree-agent-aac73e9bda5e1dfb7[m[33m, [m[1;32mworktree-agent-a55cfa2dd6803e36a[m[33m)[m refactor ui login
+* [33m2b3b8fd[m add GitHub Actions CI/CD (test + auto-deploy to VPS)
+* [33m41b2063[m chore: mark deploy.sh executable
+* [33ma0221ac[m chore: add docker-compose.prod.yml for VPS deploy
