@@ -94,4 +94,19 @@ export class SecurityEventRepository {
     });
     return rows.map((row) => row.sourceIp);
   }
+
+  // Returns all SecurityEvents for blocked requests within a given date range.
+  // Feeds GET /admin/detection-analysis per BR-01.
+  async findBlockedInRange(from: Date, to: Date): Promise<SecurityEvent[]> {
+    return this.prisma.securityEvent.findMany({
+      where: {
+        decision: 'BLOCK',
+        timestamp: {
+          gte: from,
+          lte: to,
+        },
+      },
+      orderBy: { timestamp: 'desc' },
+    });
+  }
 }
