@@ -1,8 +1,9 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Nginx (docker-compose.prod.yml) is the only path in, but it reaches this
   // container through Docker's published-port NAT, not literally over
@@ -15,7 +16,7 @@ async function bootstrap() {
   // the internet — see docker-compose.prod.yml). This is what lets Express
   // resolve req.ip from the X-Forwarded-For header Nginx sets, instead of
   // Nginx's own address, so SecurityEvent.sourceIp reflects the real client.
-  app.getHttpAdapter().getInstance().set('trust proxy', 'uniquelocal');
+  app.set('trust proxy', 'uniquelocal');
 
   // The Dashboard (frontend/, Phase 10) is a browser app on a different
   // origin — scoped to one configurable origin, never a wildcard, per
