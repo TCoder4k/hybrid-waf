@@ -11,6 +11,7 @@ describe('TrafficMetricRepository', () => {
           blockedRequests: 3,
           sqlInjectionBlocks: 2,
           xssBlocks: 1,
+          rateLimitBlocks: 0,
         },
       });
       const prisma = {
@@ -26,6 +27,7 @@ describe('TrafficMetricRepository', () => {
         blockedRequests: 3,
         sqlInjectionBlocks: 2,
         xssBlocks: 1,
+        rateLimitBlocks: 0,
       });
       expect(aggregate).toHaveBeenCalledWith({
         _sum: {
@@ -34,6 +36,7 @@ describe('TrafficMetricRepository', () => {
           blockedRequests: true,
           sqlInjectionBlocks: true,
           xssBlocks: true,
+          rateLimitBlocks: true,
         },
       });
     });
@@ -46,6 +49,7 @@ describe('TrafficMetricRepository', () => {
           blockedRequests: null,
           sqlInjectionBlocks: null,
           xssBlocks: null,
+          rateLimitBlocks: null,
         },
       });
       const prisma = {
@@ -61,6 +65,7 @@ describe('TrafficMetricRepository', () => {
         blockedRequests: 0,
         sqlInjectionBlocks: 0,
         xssBlocks: 0,
+        rateLimitBlocks: 0,
       });
     });
 
@@ -82,6 +87,7 @@ describe('TrafficMetricRepository', () => {
           blockedRequests: null,
           sqlInjectionBlocks: null,
           xssBlocks: null,
+          rateLimitBlocks: null,
         },
       });
       const prisma = {

@@ -22,6 +22,10 @@ const ATTACK_TYPE_STYLES: Record<string, string> = {
   SQL_INJECTION:
     "bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
   XSS: "bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
+  // Phase P3 (docs/architecture.md §22) — a rate-limit block, not a rule/ML
+  // attack classification.
+  RATE_LIMIT:
+    "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
 };
 const DEFAULT_ATTACK_TYPE_STYLE =
   "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";

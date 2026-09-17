@@ -3,7 +3,8 @@
 // or the database directly (§15).
 import { clearToken, getToken } from "./auth";
 
-const BASE_URL = process.env.NEXT_PUBLIC_ADMIN_API_URL ?? "http://localhost:3000";
+const BASE_URL =
+  process.env.NEXT_PUBLIC_ADMIN_API_URL ?? "http://localhost:3000";
 
 export class ApiError extends Error {
   constructor(
@@ -25,6 +26,9 @@ export interface TrafficStats {
   blockedRequests: number;
   sqlInjectionBlocks: number;
   xssBlocks: number;
+  // Phase P3 (docs/architecture.md §22) — requests rejected by the rate
+  // limiter, counted separately from sqlInjectionBlocks/xssBlocks.
+  rateLimitBlocks: number;
 }
 
 export interface SecurityEvent {
@@ -33,7 +37,7 @@ export interface SecurityEvent {
   sourceIp: string;
   method: string;
   endpoint: string;
-  attackType: string;
+  attackType: SecurityEventAttackType;
   confidence: number | null;
   decision: string;
   country: string | null;
@@ -45,6 +49,8 @@ export interface SecurityEvent {
   mlResult: unknown;
   requestMeta: unknown;
 }
+
+export type SecurityEventAttackType = "SQL_INJECTION" | "XSS" | "RATE_LIMIT";
 
 export interface SecurityEventListResult {
   items: SecurityEvent[];
@@ -69,9 +75,22 @@ export interface SystemStatus {
   wafEngine: SystemComponentStatus;
   mlService: SystemComponentStatus;
   database: SystemComponentStatus;
-  protectedApi: SystemComponentStatus;
+  // Renamed from `protectedApi` (Phase P1, ADR-8) — reflects whatever
+  // upstream the WAF is currently configured to forward to, not
+  // specifically the bundled protected-api demo service.
+  upstream: SystemComponentStatus;
   checkedAt: string;
 }
+
+export interface RateLimitSummary {
+  perIpRatePerSecond: number;
+  perIpBurst: number;
+  globalRatePerSecond: number;
+  globalBurst: number;
+  maxConcurrency: number;
+}
+
+export type WafMode = "MONITOR" | "RULE_BLOCK_ML_MONITOR" | "HYBRID_BLOCK";
 
 export interface SystemInfo {
   version: string;
@@ -79,6 +98,23 @@ export interface SystemInfo {
   uptimeSeconds: number;
   serverTime: string; // ISO 8601
   mlConfidenceThreshold: number;
+  // Phase P5/P6 (docs/architecture.md §22/§23) — read-only, env-sourced.
+  wafMode: WafMode;
+  rateLimit: RateLimitSummary;
+}
+
+export interface UpstreamConnection {
+  ok: boolean;
+  status: number | null;
+  latencyMs: number | null;
+  checkedAt: string;
+}
+
+export interface UpstreamConfiguration {
+  url: string;
+  source: "RUNTIME" | "ENVIRONMENT";
+  updatedAt: string | null;
+  connection: UpstreamConnection | null;
 }
 
 export interface AdminStatsExtra {
@@ -199,6 +235,30 @@ async function authenticatedPatch<T>(
   return (await res.json()) as T;
 }
 
+async function authenticatedPut<T>(path: string, body: unknown): Promise<T> {
+  const token = getToken();
+  if (!token) {
+    throw new ApiError(401, "Not logged in");
+  }
+
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: "PUT",
+    headers: {
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (res.status === 401) {
+    clearToken();
+  }
+  if (!res.ok) {
+    throw new ApiError(res.status, await parseErrorMessage(res));
+  }
+  return (await res.json()) as T;
+}
+
 // `days` omitted -> all-time totals (Phase 10's original behavior).
 export function getStats(days?: number): Promise<TrafficStats> {
   return authenticatedGet<TrafficStats>(
@@ -224,6 +284,14 @@ export function getSystemInfo(): Promise<SystemInfo> {
   return authenticatedGet<SystemInfo>("/admin/system-info");
 }
 
+export function getUpstream(): Promise<UpstreamConfiguration> {
+  return authenticatedGet<UpstreamConfiguration>("/admin/upstream");
+}
+
+export function updateUpstream(url: string): Promise<UpstreamConfiguration> {
+  return authenticatedPut<UpstreamConfiguration>("/admin/upstream", { url });
+}
+
 export function getMe(): Promise<Me> {
   return authenticatedGet<Me>("/admin/me");
 }
@@ -242,7 +310,7 @@ export function changePassword(
 export interface EventListFilter {
   page?: number;
   pageSize?: number;
-  attackType?: string;
+  attackType?: SecurityEventAttackType;
   method?: string;
   // Matches endpoint OR sourceIp (case-insensitive "contains") — not
   // user-agent, since requestMeta never stores one (ADR-4 redaction
@@ -285,4 +353,3 @@ export function getDetectionAnalysis(
     `/admin/detection-analysis${days !== undefined ? `?days=${days}` : ""}`,
   );
 }
-

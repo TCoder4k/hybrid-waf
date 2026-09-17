@@ -11,7 +11,7 @@ const ROWS: { key: SystemComponentKey; label: string }[] = [
   { key: "wafEngine", label: "WAF Engine" },
   { key: "mlService", label: "ML Service" },
   { key: "database", label: "Database" },
-  { key: "protectedApi", label: "Protected API" },
+  { key: "upstream", label: "Upstream" },
 ];
 
 export function SystemStatusPanel({ status }: SystemStatusPanelProps) {

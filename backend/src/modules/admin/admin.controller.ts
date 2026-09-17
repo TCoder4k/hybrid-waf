@@ -7,12 +7,18 @@ import {
   HttpStatus,
   Patch,
   Param,
+  Put,
   Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { daysToRange } from '../../common/date-range.util';
+import type { SecurityEventAttackType } from '../../common/types';
+import {
+  UpstreamConfigService,
+  UpstreamConfiguration,
+} from '../../common/upstream-config.service';
 import { AuthService, JwtPayload } from '../auth/auth.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SecurityEventListFilter } from '../security-events/security-event.repository';
@@ -34,7 +40,11 @@ const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 const MAX_TREND_DAYS = 90;
 const DEFAULT_TREND_DAYS = 7;
-const ALLOWED_ATTACK_TYPES = new Set(['SQL_INJECTION', 'XSS']);
+const ALLOWED_ATTACK_TYPES: readonly SecurityEventAttackType[] = [
+  'SQL_INJECTION',
+  'XSS',
+  'RATE_LIMIT',
+];
 
 // Every route here requires a valid JWT (docs/architecture.md §11/§13) —
 // this is the only module gated by JwtAuthGuard.
@@ -45,6 +55,7 @@ export class AdminController {
     private readonly adminService: AdminService,
     private readonly systemStatusService: SystemStatusService,
     private readonly authService: AuthService,
+    private readonly upstreamConfigService: UpstreamConfigService,
   ) {}
 
   @Get('events')
@@ -111,6 +122,20 @@ export class AdminController {
     return buildSystemInfo();
   }
 
+  @Get('upstream')
+  getUpstream(): Promise<UpstreamConfiguration> {
+    return this.upstreamConfigService.getConfiguration();
+  }
+
+  @Put('upstream')
+  updateUpstream(@Body() body: unknown): Promise<UpstreamConfiguration> {
+    const record = (body ?? {}) as Record<string, unknown>;
+    if (typeof record.url !== 'string') {
+      throw new BadRequestException('url is required');
+    }
+    return this.upstreamConfigService.updateUrl(record.url);
+  }
+
   @Patch('password')
   @HttpCode(HttpStatus.NO_CONTENT)
   async changePassword(
@@ -166,9 +191,9 @@ function parseListFilter(
     MAX_PAGE_SIZE,
   );
 
-  let attackType: string | undefined;
+  let attackType: SecurityEventAttackType | undefined;
   if (query.attackType !== undefined) {
-    if (!ALLOWED_ATTACK_TYPES.has(query.attackType)) {
+    if (!isSecurityEventAttackType(query.attackType)) {
       throw new BadRequestException(
         `attackType must be one of: ${[...ALLOWED_ATTACK_TYPES].join(', ')}`,
       );
@@ -200,6 +225,12 @@ function parseListFilter(
     from,
     to,
   };
+}
+
+function isSecurityEventAttackType(
+  value: string,
+): value is SecurityEventAttackType {
+  return ALLOWED_ATTACK_TYPES.includes(value as SecurityEventAttackType);
 }
 
 function parseMinConfidence(value: string | undefined): number | undefined {

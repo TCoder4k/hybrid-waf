@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { UpstreamConfigService } from '../../common/upstream-config.service';
 import { PrismaService } from '../../database/prisma.service';
 import { ComponentStatus, pingHealth } from './health-ping.util';
 
@@ -11,7 +12,10 @@ export interface SystemStatus {
   wafEngine: SystemComponentStatus;
   mlService: SystemComponentStatus;
   database: SystemComponentStatus;
-  protectedApi: SystemComponentStatus;
+  // Renamed from `protectedApi` in Phase P1 (ADR-8, docs/architecture.md
+  // §21) — reflects whatever UPSTREAM_URL/PROTECTED_API_URL currently
+  // resolves to, not specifically the bundled `protected-api` demo service.
+  upstream: SystemComponentStatus;
   checkedAt: string;
 }
 
@@ -22,12 +26,15 @@ export interface SystemStatus {
 // AdminService method).
 @Injectable()
 export class SystemStatusService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly upstreamConfigService: UpstreamConfigService,
+  ) {}
 
   async getStatus(): Promise<SystemStatus> {
-    const [mlService, protectedApi, database] = await Promise.all([
+    const [mlService, upstream, database] = await Promise.all([
       pingHealth(process.env.ML_SERVICE_URL ?? 'http://localhost:8001'),
-      pingHealth(process.env.PROTECTED_API_URL ?? 'http://localhost:3001'),
+      this.pingUpstream(),
       this.pingDatabase(),
     ]);
 
@@ -35,10 +42,23 @@ export class SystemStatusService {
     return {
       wafEngine: { status: 'up', latencyMs: null },
       mlService,
-      protectedApi,
+      upstream,
       database,
       checkedAt: new Date().toISOString(),
     };
+  }
+
+  private async pingUpstream(): Promise<SystemComponentStatus> {
+    let upstreamUrl: string;
+    try {
+      upstreamUrl = await this.upstreamConfigService.getActiveUrl();
+    } catch {
+      // Malformed UPSTREAM_URL/PROTECTED_API_URL — this endpoint never
+      // throws (see the class comment), so a bad config just reports as
+      // "down" like any other unreachable component.
+      return { status: 'down', latencyMs: null };
+    }
+    return pingHealth(upstreamUrl);
   }
 
   private async pingDatabase(): Promise<SystemComponentStatus> {

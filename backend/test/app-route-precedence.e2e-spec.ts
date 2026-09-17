@@ -11,8 +11,8 @@ import type { PrismaService as PrismaServiceType } from '../src/database/prisma.
 process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-only-secret';
 process.env.JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? '30m';
 // Deliberately unreachable — proves the WAF's catch-all still handles
-// non-admin/non-auth paths (502) without needing a real Protected API.
-process.env.PROTECTED_API_URL = 'http://127.0.0.1:1';
+// non-admin/non-auth paths (502) without needing a real upstream.
+process.env.UPSTREAM_URL = 'http://127.0.0.1:1';
 
 // Regression guard for the bug found live in Phase 9: WafModule's
 // `@All('*')` catch-all was registered before AuthModule/AdminModule, so
@@ -85,7 +85,7 @@ describe('App route precedence (e2e)', () => {
 
     // 502 proves WafController's catch-all is still intact for non-admin
     // paths — it tried to forward to the (deliberately unreachable)
-    // Protected API and got a connection failure, per its documented
+    // configured upstream and got a connection failure, per its documented
     // failure-handling behavior.
     expect(res.status).toBe(502);
   });

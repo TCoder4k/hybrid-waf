@@ -43,7 +43,11 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       ML_SERVICE_URL: http://ml-service:8001
-      PROTECTED_API_URL: http://protected-api:3001
+      # Canonical upstream target (docs/architecture.md §21, ADR-8) — points
+      # at the bundled protected-api demo service by default here, but the
+      # WAF itself has no code path assuming that specific name; point this
+      # at any other reachable web/API to protect it instead.
+      UPSTREAM_URL: http://protected-api:3001
       # Must match the frontend's host-mapped port below — the browser sends
       # this as its Origin header, and CORS (backend/src/main.ts) only
       # allows this exact origin, never a wildcard.

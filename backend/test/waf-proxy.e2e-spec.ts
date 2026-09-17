@@ -7,8 +7,10 @@ import { App } from 'supertest/types';
 import { PrismaService } from '../src/database/prisma.service';
 import { WafModule } from '../src/modules/waf/waf.module';
 
-// Stands in for protected-api so this test needs no external process/DB —
-// see docs/architecture.md §4 for the flow being proven here. Phase 8 wired
+// Stands in for the configured upstream (the bundled protected-api demo
+// service in normal operation, per docs/architecture.md §21/ADR-8) so this
+// test needs no external process/DB — see docs/architecture.md §4 for the
+// flow being proven here. Phase 8 wired
 // SecurityEvent logging into the BLOCK path, and Phase 9A wired
 // non-blocking Traffic Metrics into every path, both of which pull in
 // DatabaseModule transitively; PrismaService is overridden with a fake so
@@ -38,7 +40,7 @@ describe('WAF Proxy (e2e)', () => {
     });
     await new Promise<void>((resolve) => fakeProtectedApi.listen(0, resolve));
     const { port } = fakeProtectedApi.address() as AddressInfo;
-    process.env.PROTECTED_API_URL = `http://127.0.0.1:${port}`;
+    process.env.UPSTREAM_URL = `http://127.0.0.1:${port}`;
 
     const moduleRef: TestingModule = await Test.createTestingModule({
       imports: [WafModule],
@@ -65,7 +67,7 @@ describe('WAF Proxy (e2e)', () => {
     executeRaw.mockResolvedValue(undefined);
   });
 
-  it('forwards a request, relays the Protected API response, and records traffic metrics', async () => {
+  it('forwards a request, relays the upstream response, and records traffic metrics', async () => {
     const res = await request(app.getHttpServer()).get('/api/hello');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ message: 'Hello from the Protected API' });
@@ -73,12 +75,12 @@ describe('WAF Proxy (e2e)', () => {
     expect(executeRaw).toHaveBeenCalledTimes(1);
   });
 
-  it('relays a Protected API 404 verbatim', async () => {
+  it('relays an upstream 404 verbatim', async () => {
     const res = await request(app.getHttpServer()).get('/api/does-not-exist');
     expect(res.status).toBe(404);
   });
 
-  it('returns 403, logs a SecurityEvent, records traffic metrics, and never reaches Protected API when the rule engine detects SQL Injection', async () => {
+  it('returns 403, logs a SecurityEvent, records traffic metrics, and never reaches the upstream when the rule engine detects SQL Injection', async () => {
     const res = await request(app.getHttpServer()).get(
       '/api/hello?id=1 OR 1=1',
     );
@@ -137,7 +139,26 @@ describe('WAF Proxy (e2e)', () => {
     await new Promise((resolve) => process.nextTick(resolve));
   });
 
-  it('returns 502 Bad Gateway once the Protected API becomes unreachable', async () => {
+  // SSRF invariant (docs/architecture.md §21, ADR-8), proven end-to-end
+  // through the real WafController -> WafService -> UpstreamProxyService
+  // pipeline, not just in isolation: a spoofed Host/X-Forwarded-Host cannot
+  // redirect the request away from the server-side-configured UPSTREAM_URL.
+  // If it could, this request would either fail to connect or hit a
+  // different server than the fake one below — instead it must still land
+  // on the fake upstream and get its real response back. Must run before
+  // the "upstream becomes unreachable" test below, which permanently closes
+  // fakeProtectedApi.
+  it('ignores a spoofed Host/X-Forwarded-Host and still forwards to the configured UPSTREAM_URL', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/api/hello')
+      .set('Host', 'attacker-controlled.example')
+      .set('X-Forwarded-Host', 'attacker-controlled.example');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ message: 'Hello from the Protected API' });
+  });
+
+  it('returns 502 Bad Gateway once the upstream becomes unreachable', async () => {
     await new Promise<void>((resolve) =>
       fakeProtectedApi.close(() => resolve()),
     );

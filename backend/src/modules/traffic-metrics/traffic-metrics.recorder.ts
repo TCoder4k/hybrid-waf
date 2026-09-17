@@ -27,12 +27,21 @@ export class TrafficMetricsRecorder {
         : 0;
     const xssBlocks =
       decision.action === 'BLOCK' && decision.classification === 'XSS' ? 1 : 0;
+    // Phase P3 (docs/architecture.md §22) — a RATE_LIMIT block never goes
+    // through HybridDecisionEngine, but RateLimitRecorder constructs an
+    // equivalent DecisionResult so it flows through this exact same
+    // counting logic rather than a parallel implementation.
+    const rateLimitBlocks =
+      decision.action === 'BLOCK' && decision.classification === 'RATE_LIMIT'
+        ? 1
+        : 0;
 
     return this.repository.incrementBucket(bucketStart, {
       allowed,
       blocked,
       sqlInjectionBlocks,
       xssBlocks,
+      rateLimitBlocks,
     });
   }
 }

@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, SecurityEvent } from '@prisma/client';
 import { DateRange } from '../../common/date-range.util';
+import type { SecurityEventAttackType } from '../../common/types';
 import { PrismaService } from '../../database/prisma.service';
 
 export interface SecurityEventListFilter {
   page: number;
   pageSize: number;
-  attackType?: string;
+  attackType?: SecurityEventAttackType;
   method?: string;
   // Free-text match against endpoint OR sourceIp (case-insensitive
   // "contains"). Not user-agent — requestMeta never stores one (ADR-4
@@ -101,6 +102,9 @@ export class SecurityEventRepository {
     return this.prisma.securityEvent.findMany({
       where: {
         decision: 'BLOCK',
+        // RATE_LIMIT events happen before Rule/ML detection and are not part
+        // of Rule-vs-ML Detection Analysis.
+        attackType: { in: ['SQL_INJECTION', 'XSS'] },
         timestamp: {
           gte: from,
           lte: to,

@@ -562,8 +562,11 @@ No deviations from the stack in `docs/CLAUDE.md` §7.
 | ADR-5 | JWT-based admin auth, stateless, short-lived access tokens (~15–30 min), no server-side logout/session store — logout does not revoke an already-issued token. MVP trade-off: exposure window on a leaked pre-logout token is bounded by expiry, not eliminated; no Redis/session infra added solely for logout. See §13. | **Approved (clarified)** |
 | ADR-6 | Four independent top-level services (`backend`, `protected-api`, `ml-service`, `frontend`) rather than a merged app | **Approved** |
 | ADR-7 | Aggregate traffic counters (`TrafficMetric`, hourly UTC buckets: total/allowed/blocked/SQLi/XSS) via a separate table updated atomically per-request in the WAF pipeline, not via `SecurityEvent` rows — `SecurityEvent` stays BLOCK-only (ADR-3 unchanged). The counter write is fire-and-forget: never awaited before the ALLOW/BLOCK response, always `.catch()`-guarded, so counter latency/failure can never delay or change a security decision. Decided in Phase 9A, ahead of Phase 10's Dashboard (which needs Total/Allowed Requests that `SecurityEvent` alone cannot supply). See §8a/§10/§12. | **Approved** |
+| ADR-8 | Generic, configurable upstream (`UPSTREAM_URL`, migrated from `PROTECTED_API_URL` via a one-phase fallback alias) replaces the hardcoded assumption that the WAF only ever forwards to the bundled `protected-api` demo service. The upstream target is exclusively server-side env-config — never derived from any request-supplied data (Host header, `X-Forwarded-Host`, body, query params). This SSRF/open-proxy invariant is a permanent architectural rule, not just a current fact, and must hold for any future admin-configurable-upstream feature too (admin-only mutation, never client-supplied). See §21. | **Approved** |
+| ADR-9 | Layer-7 rate limiting: token-bucket algorithm, per-IP + global, implemented in-memory (not Redis) because the current deployment (`docker-compose.prod.yml`) runs exactly one `backend` instance — an in-memory limiter is correct, not just simpler, under that shape. Redis-backed distributed limiting is explicitly deferred until the backend is actually horizontally scaled; when introduced, it must fail open with a local in-memory fallback (mirroring ADR-2's "ML unavailable never fails closed" precedent), not fail closed. Volumetric Layer-3/4 DDoS mitigation remains a permanent non-goal (`docs/CLAUDE.md` §3) — out of an application process's reach. See §22. | **Approved** |
+| ADR-10 | ML onboarding modes (`MONITOR` / `RULE_BLOCK_ML_MONITOR` / `HYBRID_BLOCK`) as an explicit parameter into the existing `HybridDecisionEngine.decide()` (§8), letting a newly-protected site's ML behavior be observed before it can affect real traffic. Additive to the existing deterministic decision table, not a redesign — `ML_CONFIDENCE_THRESHOLD` (§8) is unchanged. See §23. | **Approved** |
 
-Phase 1A is complete: all six ADRs are approved, ADR-2 and ADR-5 with the clarifications above. ADR-7 added in Phase 9A (2026-08-26).
+Phase 1A is complete: all six ADRs are approved, ADR-2 and ADR-5 with the clarifications above. ADR-7 added in Phase 9A (2026-08-26). ADR-8/ADR-9/ADR-10 added in the Reverse-Proxy Generalization & L7 Protection initiative, Phase P0 (2026-09-15) and implemented P1-P6 (2026-09-15/16); see §21-23.
 
 ---
 
@@ -585,6 +588,77 @@ Not part of the Phase 0–11 roadmap or a numbered ADR — a small standalone ad
 - **CI** — 3 parallel jobs on every push to `main` (skipped for doc-only changes): `backend-ci` (`npm run build && npm run lint && npm test && npm run test:e2e`, against a real `postgres:16-alpine` GitHub Actions service container with `npx prisma migrate deploy` applied first — `database.e2e-spec.ts`/`app.e2e-spec.ts` need a genuinely reachable DB since `PrismaService.onModuleInit` eagerly `$connect()`s), `frontend-ci` (`npm run build && npm run lint`), `ml-service-ci` (`pytest`, against the committed trained model artifacts — no retraining in CI).
 - **CD** — a `deploy` job, gated on all 3 CI jobs passing (`needs:`), SSHes into the VPS (`appleboy/ssh-action`) and runs `cd /var/www/hybrid-waf && ./deploy.sh` — literally the same manual command, just triggered by CI success instead of a human. `concurrency: production-deploy` serializes deploys so two fast pushes can't race each other's `docker compose up -d --build` on the same VPS.
 - **Accepted trade-off, stated plainly:** GitHub Actions authenticates as `root` using the VPS's existing **password** (stored as an encrypted repo secret, `VPS_PASSWORD`) — the VPS doesn't accept any SSH key for `root` at all today (confirmed live: password auth is the only thing that worked), so this is password auth over SSH, not the more conventional key-based CI credential. Still encrypted end-to-end by the SSH protocol; the value only ever exists as an encrypted GitHub secret. But it's still full `root`, not a newly-provisioned restricted deploy-only user — a leaked secret or a compromised Actions run means full root on the VPS. A dedicated low-privilege deploy user (key-based auth, sudo rights scoped to `docker compose` only, no root login at all) would close this gap but needs VPS-side setup beyond what this task did — noted here as a known follow-up, not silently accepted as "fine forever."
+
+---
+
+## 21. Generic Upstream (Implemented — Phase P1, ADR-8)
+
+**Implemented 2026-09-15/16.** Design approved in Phase P0; built in Phase P1. See `docs/PROTECTING_ANOTHER_APP.md` for the practical how-to (both deployment topologies, env config, verification steps, rollback).
+
+**Goal:** the WAF stops assuming it only ever forwards to the bundled `protected-api` demo service. The forwarding target becomes a generic, operator-configured upstream — the bundled `protected-api` remains available as the default/demo target, but is no longer architecturally required.
+
+**Env var migration:** `UPSTREAM_URL` becomes the canonical env var. For one migration phase (P1), the resolution order is `UPSTREAM_URL ?? PROTECTED_API_URL ?? http://localhost:3001` — `PROTECTED_API_URL` is a temporary fallback alias so existing deployments/tests don't break mid-migration, dropped once `docker-compose*.yml`/`.env.example`/tests are updated to the new name in that same phase. Read per-request, not cached at construction — same pattern as today's `PROTECTED_API_URL` handling.
+
+**Renamed component:** `ProtectedApiClientService` → `UpstreamProxyService` (module home: `modules/upstream/`, matching the existing one-module-per-concern pattern already used for `traffic-metrics/`/`security-events/`).
+
+**Hard invariant (SSRF/open-proxy safety, ADR-8):** the upstream target is exclusively `process.env.UPSTREAM_URL` (with its P1-only fallback above) — never derived from any request-supplied data (Host header, `X-Forwarded-Host`, body, query params, or any other client input). This must hold permanently, including for any future admin-configurable-upstream dashboard feature, which must remain an admin-only server-side mutation, never a per-request or client-supplied value. A test asserting this invariant (injecting a malicious `Host`/`X-Forwarded-Host` and confirming the resolved target is unaffected) is part of Phase P1's required test coverage.
+
+**Proxy transparency hardening** (Phase P2, not P1): the current forwarding implementation has several known transparency gaps — no timeout on the outbound fetch, no multipart/form-data support, a body/Content-Type mismatch (JSON re-serialization regardless of original content type), silent redirect-following, and non-binary-safe response relay (`.text()` only). These are tracked as Phase P2 work, not part of the P1 rename/generalization itself.
+
+**Deployment topology (two documented patterns, formalized fully in Phase P8):**
+- **Same Docker network** — target app is a sibling container publishing **no host port**, `UPSTREAM_URL=http://real-app:8080` via the compose service DNS name; the network boundary itself prevents origin bypass, exactly as `protected-api` already demonstrates.
+- **External upstream** — a separate host, `UPSTREAM_URL=https://origin.example.com`. Docker networking can't enforce exclusivity across hosts here, so bypass prevention becomes the target server's own responsibility: firewall/security-group allow-listing of the WAF's egress IP(s), optionally a shared-secret header as defense-in-depth. This is an operational requirement to document (P8), not something this project's code can enforce for an external host.
+
+---
+
+## 22. L7 Rate Limiting / DoS Protection (Implemented — Phase P3/P3a, ADR-9)
+
+**Implemented 2026-09-15/16.** Design approved in Phase P0; built in Phase P3 (rate limiting) and P3a (ml-service `--workers`, confirmed live to roughly halve p95 latency and raise throughput ~39% at the ~100-VU concurrency range where the single-worker ml-service previously bottlenecked — see `load-testing/capacity-comparison-p3a.md` for the full before/after data and its honest caveats).
+
+**Threat model, stated explicitly:**
+- **In scope (Layer 7 / application-level):** HTTP flood (request volume from one or many IPs), slow/incomplete requests holding connections open, and a WAF-specific amplification risk worth naming — Rule and ML detection already run in parallel (`Promise.all`, §4) on *every* request, so ML's CPU-bound inference cost is paid regardless of the rule engine's verdict; an attacker needs only volume, not malicious payloads, to pin the (currently single-worker, see ml-service notes below) ML service. A sustained flood of rule-detectable payloads also forces sustained **awaited** `SecurityEvent` writes in the BLOCK path (§10) today — another amplification vector this rate limiter addresses by rejecting before detection ever runs.
+- **Out of scope, permanently (`docs/CLAUDE.md` §3):** volumetric Layer-3/4 DDoS (SYN floods, UDP reflection, bandwidth saturation) — outside what an application process can mitigate; requires CDN/firewall/hosting-provider infrastructure this project does not own.
+
+**Pipeline placement:** a NestJS `Guard` applied to `WafController` specifically (not a global `APP_GUARD`, so `/auth/login`/`/admin/*` are unaffected) — runs *before* `RequestNormalizerService.normalize()` is ever invoked, so a rejected request never reaches normalization/detection at all:
+
+```text
+Request → Rate Limiter (NEW) → Normalizer → Rule+ML Detection (parallel) → Hybrid Decision → ...
+```
+
+**Design:**
+- Token bucket algorithm — per-IP (`RATE_LIMIT_PER_IP_RPS` + `RATE_LIMIT_PER_IP_BURST`) and a second, coarser global bucket (`RATE_LIMIT_GLOBAL_RPS`) protecting total system capacity against many-IP floods that each individually stay under the per-IP limit.
+- A max-concurrency cap on requests in flight through the detection pipeline — rejects (429/503) rather than queuing unboundedly once saturated, since unbounded queuing is itself a memory-exhaustion vector.
+- `429` responses carry a `Retry-After` header computed from the bucket's refill time.
+- Client IP source: reuse `req.ip` (already `trust proxy`-aware, §13/main.ts) — not reimplemented. `::ffff:`-mapped IPv4 addresses (already observed in this project's own live event data) are normalized to plain IPv4 before being used as a bucket key, via a new small utility, so dual-stack clients don't fragment across two buckets for the same real IP.
+- Explicit request body-size limit and header/request timeout (slowloris protection) added to `main.ts` — today implicit/default and unconfigured.
+- Upstream fetch timeout (`UPSTREAM_TIMEOUT_MS`, `AbortController` — the same pattern `MLDetectionEngine`/`health-ping.util.ts` already use) trips to `504`, distinct from the existing `502` (connection failure).
+- Scope for this pass: **global + per-IP only, env-var-configured** — deliberately the smallest safe production-oriented implementation. Per-route limits and dashboard-configurable limits are explicitly deferred (optional Phase P9).
+
+**Distributed limiting (Redis) — explicitly deferred, ADR-9:** the current deployment (`docker-compose.prod.yml`) runs exactly one `backend` instance, so an in-memory limiter is correct, not merely simpler, today. Redis is deferred to an optional Phase P4, conditioned strictly on the backend actually being horizontally scaled — introducing it now would add a new stateful dependency ahead of an actual need, the same reasoning ADR-5 already applied to declining Redis for JWT logout. **When P4 does happen:** fail-open with a local in-memory fallback, not fail-closed — mirrors ADR-2's precedent that a defense-in-depth layer should degrade gracefully rather than become a new availability single point of failure.
+
+**Classification/logging:** a rate-limit rejection does **not** pass through `HybridDecisionEngine` (§8) — it's an earlier, independent gate, not a rule/ML classification. It is still recorded: a fire-and-forget metrics increment (same non-blocking pattern as `TrafficMetricsRecorder`, §8a) and a `SecurityEvent`-style row using a new `RATE_LIMIT` value in the existing free-text `attackType` field (no schema migration needed — confirmed not an enum, §12) — added in Phase P6, alongside the corresponding dashboard updates (new filter option, chart handling for a third classification).
+
+---
+
+## 23. ML Onboarding Modes (Implemented — Phase P5, ADR-10)
+
+**Implemented 2026-09-15/16.** Design approved in Phase P0; built in Phase P5, confirmed live end-to-end (MONITOR mode correctly detects and suppresses a real SQLi block, recording the shadow decision).
+
+**Motivation:** a newly-protected external site has different traffic characteristics than this project's own synthetic training data (§6/Phase 6 detail, `docs/memory.md`). Enabling full ML-driven blocking on day one risks false positives on legitimate traffic the model has never seen. `ML_CONFIDENCE_THRESHOLD` (§8) already exists and is unchanged by this section — this adds a coarser, mode-level control on top of it.
+
+**`WAF_MODE`** — an explicit parameter passed into `HybridDecisionEngine.decide()` (kept pure/testable, not read from `process.env` inside the engine itself, matching its current design), with three values:
+
+| Mode | Rule BLOCK (branch 1, §8) | ML-confidence BLOCK (branch 4, §8) |
+|---|---|---|
+| `MONITOR` | suppressed (always ALLOW) | suppressed (always ALLOW) |
+| `RULE_BLOCK_ML_MONITOR` | unchanged (blocks as today) | suppressed — ML still evaluated and recorded, never gates the decision |
+| `HYBRID_BLOCK` (default, today's existing behavior) | unchanged | unchanged |
+
+This is additive to the existing deterministic decision table (§8) — gating two of its existing branches via a parameter, not a redesign of the engine.
+
+**Shadow decision:** `MONITOR`/`RULE_BLOCK_ML_MONITOR` need a way to record what *would* have happened without changing the actual (always-ALLOW-in-those-branches) decision — `DecisionResult` gains an optional `shadowClassification`/`wouldBlock` field, populated whenever a suppressed branch would otherwise have fired, logged alongside the real decision so onboarding data can actually be reviewed before flipping to `HYBRID_BLOCK`. Exact field shape is an implementation-phase detail, not fixed by this document.
+
+**Sample collection / retraining:** deliberately kept as documentation, not new infrastructure — export via the existing CSV pattern already built for the Events page (`docs/memory.md`, "Security Events Page detail"); retraining reuses the existing `ml-service/training/train.py` pipeline unchanged (swap the dataset, retrain, swap `model/*.joblib`, restart ml-service).
 
 ---
 

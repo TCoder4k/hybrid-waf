@@ -149,11 +149,25 @@ describe('AdminController', () => {
       );
     });
 
-    it('rejects an attackType outside SQL_INJECTION/XSS', () => {
+    it('accepts RATE_LIMIT as a SecurityEvent attack type', () => {
+      const listEvents = jest.fn().mockResolvedValue({ items: [], total: 0 });
+      const controller = makeController({ listEvents });
+
+      void controller.listEvents({ attackType: 'RATE_LIMIT' });
+
+      expect(listEvents).toHaveBeenCalledWith(
+        expect.objectContaining({ attackType: 'RATE_LIMIT' }),
+      );
+    });
+
+    it('rejects an attackType outside the explicit SecurityEvent allow-list', () => {
       const controller = makeController();
       expect(() => controller.listEvents({ attackType: 'NORMAL' })).toThrow(
         BadRequestException,
       );
+      expect(() =>
+        controller.listEvents({ attackType: 'COMMAND_INJECTION' }),
+      ).toThrow(BadRequestException);
     });
 
     it('rejects an invalid "from" date', () => {
@@ -307,7 +321,7 @@ describe('AdminController', () => {
         wafEngine: 'up' as const,
         mlService: 'up' as const,
         database: 'up' as const,
-        protectedApi: 'up' as const,
+        upstream: 'up' as const,
       };
       const getSystemStatus = jest.fn().mockResolvedValue(status);
       const controller = makeController({ getSystemStatus });

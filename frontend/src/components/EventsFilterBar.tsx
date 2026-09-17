@@ -1,10 +1,11 @@
 import { RefreshCw, Search } from "lucide-react";
 import { Card } from "@/components/Card";
 import { DateRangeSelector, type DateRangeDays } from "@/components/DateRangeSelector";
+import type { SecurityEventAttackType } from "@/lib/api";
 
 export interface EventsFilterValue {
   search: string;
-  attackType: string; // "" = Tất cả
+  attackType: "" | SecurityEventAttackType; // "" = Tất cả
   method: string; // "" = Tất cả
   minConfidence: string; // raw input text; "" = unset
   days: DateRangeDays;
@@ -20,6 +21,7 @@ const ATTACK_TYPE_OPTIONS = [
   { value: "", label: "Tất cả" },
   { value: "SQL_INJECTION", label: "SQL Injection" },
   { value: "XSS", label: "XSS" },
+  { value: "RATE_LIMIT", label: "Rate Limit" },
 ];
 
 // Every method the Hybrid Decision Engine can see coming through
@@ -78,7 +80,12 @@ export function EventsFilterBar({
           <span className="text-xs text-zinc-500">Loại tấn công</span>
           <select
             value={value.attackType}
-            onChange={(e) => set("attackType", e.target.value)}
+            onChange={(e) =>
+              set(
+                "attackType",
+                e.target.value as EventsFilterValue["attackType"],
+              )
+            }
             className={`${inputClasses} cursor-pointer`}
           >
             {ATTACK_TYPE_OPTIONS.map((opt) => (

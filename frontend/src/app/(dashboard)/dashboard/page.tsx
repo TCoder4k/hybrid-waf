@@ -187,6 +187,7 @@ export default function DashboardPage() {
             <AttackDistributionChart
               sqlInjectionBlocks={state.stats.sqlInjectionBlocks}
               xssBlocks={state.stats.xssBlocks}
+              rateLimitBlocks={state.stats.rateLimitBlocks}
             />
           </div>
 

@@ -55,7 +55,25 @@ model TrafficMetric {
   blockedRequests    Int      @default(0)
   sqlInjectionBlocks Int      @default(0)
   xssBlocks          Int      @default(0)
+  // Phase P3 (docs/architecture.md §22, ADR-9) — requests rejected by the
+  // rate limiter. Counted separately from sqlInjectionBlocks/xssBlocks
+  // (also included in the generic blockedRequests total) so per-type
+  // dashboard stats don't conflate "attack blocked" with "rate limited."
+  rateLimitBlocks    Int      @default(0)
 
   @@unique([bucketStart])
   @@map("traffic_metrics")
+}
+
+// One runtime-selected upstream for the single-tenant WAF. The environment
+// remains the bootstrap fallback when this row does not exist.
+model WafConfiguration {
+  id            Int       @id @default(1)
+  upstreamUrl   String
+  lastCheckedAt DateTime?
+  lastStatus    Int?
+  lastLatencyMs Int?
+  updatedAt     DateTime  @updatedAt
+
+  @@map("waf_configurations")
 }

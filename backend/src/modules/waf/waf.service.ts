@@ -6,17 +6,19 @@ import { RuleDetectionEngine } from '../detection/rule-based/rule-detection.engi
 import { RequestNormalizerService } from '../request/request-normalizer.service';
 import { SecurityEventLogger } from '../security-events/security-event-logger.service';
 import { TrafficMetricsRecorder } from '../traffic-metrics/traffic-metrics.recorder';
-import type { ForwardedResponse } from './protected-api-client.service';
-import { ProtectedApiClientService } from './protected-api-client.service';
+import type { ForwardedResponse } from './upstream-proxy.service';
+import { UpstreamProxyService } from './upstream-proxy.service';
 
 // Pipeline orchestrator per docs/architecture.md §3.1. Wires Extract +
 // Normalize (Phase 4), Rule-based Detection (Phase 5), ML Detection (Phase
 // 6), and the Hybrid Decision Engine (Phase 7, §8) — rule and ML run in
 // parallel, per the sequence diagram in docs/architecture.md §4. A BLOCK
 // decision is logged (Phase 8, ADR-3) and short-circuits to a 403 here and
-// never reaches Protected API; ALLOW forwards exactly as before. Traffic
-// metrics (Phase 9A, ADR-7) are recorded fire-and-forget right after the
-// decision — never awaited, never allowed to gate or slow the response.
+// never reaches the configured upstream; ALLOW forwards exactly as before
+// (Phase P1, ADR-8, §21 generalized the forwarding target away from only
+// ever being the bundled `protected-api` demo service). Traffic metrics
+// (Phase 9A, ADR-7) are recorded fire-and-forget right after the decision —
+// never awaited, never allowed to gate or slow the response.
 @Injectable()
 export class WafService {
   private readonly logger = new Logger(WafService.name);
@@ -28,7 +30,7 @@ export class WafService {
     private readonly decisionEngine: HybridDecisionEngine,
     private readonly securityEventLogger: SecurityEventLogger,
     private readonly trafficMetricsRecorder: TrafficMetricsRecorder,
-    private readonly protectedApiClient: ProtectedApiClientService,
+    private readonly upstreamProxy: UpstreamProxyService,
   ) {}
 
   async handle(req: Request): Promise<ForwardedResponse> {
@@ -78,6 +80,6 @@ export class WafService {
       };
     }
 
-    return this.protectedApiClient.forward(req);
+    return this.upstreamProxy.forward(req);
   }
 }

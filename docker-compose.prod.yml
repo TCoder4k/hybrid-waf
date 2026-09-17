@@ -66,7 +66,9 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       ML_SERVICE_URL: http://ml-service:8001
-      PROTECTED_API_URL: http://protected-api:3001
+      # Canonical upstream target (docs/architecture.md §21, ADR-8) — see
+      # docker-compose.yml's comment on this same key.
+      UPSTREAM_URL: http://protected-api:3001
       # Dashboard's real origin — Nginx terminates TLS at this domain and
       # reverse-proxies to frontend/backend on 127.0.0.1 (see
       # /etc/nginx/sites-available/hybrid-waf on the VPS). The browser sends

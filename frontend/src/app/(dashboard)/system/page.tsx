@@ -12,7 +12,7 @@ const COMPONENTS = [
   { key: "wafEngine", label: "WAF Engine", icon: ShieldIcon },
   { key: "mlService", label: "ML Service", icon: Activity },
   { key: "database", label: "PostgreSQL", icon: Database },
-  { key: "protectedApi", label: "Protected API", icon: Globe },
+  { key: "upstream", label: "Upstream", icon: Globe },
 ] as const;
 
 function ShieldIcon({ size = 20 }: { size?: number }) {

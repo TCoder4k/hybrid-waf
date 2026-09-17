@@ -29,6 +29,12 @@ const blockXssDecision: DecisionResult = {
   reason: 'rule match: <script> tag',
 };
 
+const blockRateLimitDecision: DecisionResult = {
+  classification: 'RATE_LIMIT',
+  action: 'BLOCK',
+  reason: 'rate limit: exceeded for 203.0.113.9',
+};
+
 describe('TrafficMetricsRecorder', () => {
   it('increments only total + allowed for an ALLOW decision', async () => {
     const { recorder, incrementBucket } = makeRecorder();
@@ -40,6 +46,7 @@ describe('TrafficMetricsRecorder', () => {
       blocked: 0,
       sqlInjectionBlocks: 0,
       xssBlocks: 0,
+      rateLimitBlocks: 0,
     });
   });
 
@@ -53,6 +60,7 @@ describe('TrafficMetricsRecorder', () => {
       blocked: 1,
       sqlInjectionBlocks: 1,
       xssBlocks: 0,
+      rateLimitBlocks: 0,
     });
   });
 
@@ -66,6 +74,21 @@ describe('TrafficMetricsRecorder', () => {
       blocked: 1,
       sqlInjectionBlocks: 0,
       xssBlocks: 1,
+      rateLimitBlocks: 0,
+    });
+  });
+
+  it('increments total + blocked + rateLimitBlocks for a RATE_LIMIT BLOCK (Phase P3)', async () => {
+    const { recorder, incrementBucket } = makeRecorder();
+
+    await recorder.record(blockRateLimitDecision);
+
+    expect(incrementBucket).toHaveBeenCalledWith(expect.any(Date), {
+      allowed: 0,
+      blocked: 1,
+      sqlInjectionBlocks: 0,
+      xssBlocks: 0,
+      rateLimitBlocks: 1,
     });
   });
 

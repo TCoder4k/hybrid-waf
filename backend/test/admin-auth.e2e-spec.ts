@@ -40,6 +40,8 @@ describe('Admin Auth + API (e2e)', () => {
   const trafficMetricFindMany = jest.fn();
   const trafficMetricFindUnique = jest.fn();
   const queryRaw = jest.fn();
+  const wafConfigurationFindUnique = jest.fn();
+  const wafConfigurationUpsert = jest.fn();
   const originalFetch = global.fetch;
 
   beforeAll(async () => {
@@ -81,11 +83,20 @@ describe('Admin Auth + API (e2e)', () => {
         blockedRequests: 3,
         sqlInjectionBlocks: 2,
         xssBlocks: 1,
+        rateLimitBlocks: 0,
       },
     });
     trafficMetricFindMany.mockResolvedValue([]);
     trafficMetricFindUnique.mockResolvedValue(null);
     queryRaw.mockResolvedValue([{ '?column?': 1 }]);
+    wafConfigurationFindUnique.mockResolvedValue(null);
+    wafConfigurationUpsert.mockImplementation(
+      ({ create }: { create: Record<string, unknown> }) =>
+        Promise.resolve({
+          ...create,
+          updatedAt: new Date('2026-09-18T10:00:00.000Z'),
+        }),
+    );
 
     const fakePrismaService = {
       onModuleInit: jest.fn().mockResolvedValue(undefined),
@@ -102,6 +113,10 @@ describe('Admin Auth + API (e2e)', () => {
         findUnique: trafficMetricFindUnique,
       },
       $queryRaw: queryRaw,
+      wafConfiguration: {
+        findUnique: wafConfigurationFindUnique,
+        upsert: wafConfigurationUpsert,
+      },
     };
 
     // require(), not import: process.env.JWT_SECRET above must be set
@@ -132,10 +147,10 @@ describe('Admin Auth + API (e2e)', () => {
   });
 
   beforeEach(() => {
-    // GET /admin/system-status pings ml-service/protected-api over real
-    // `fetch` — stub it globally so those tests never make a real network
-    // call. Other routes never touch `fetch`, so this is a safe default for
-    // the whole file.
+    // GET /admin/system-status pings ml-service/the configured upstream over
+    // real `fetch` — stub it globally so those tests never make a real
+    // network call. Other routes never touch `fetch`, so this is a safe
+    // default for the whole file.
     global.fetch = jest.fn().mockResolvedValue({ ok: true });
   });
 
@@ -273,6 +288,68 @@ describe('Admin Auth + API (e2e)', () => {
       expect(where.timestamp).toBeDefined();
     });
 
+    it.each(['SQL_INJECTION', 'XSS', 'RATE_LIMIT'])(
+      'accepts %s as an explicit attackType filter',
+      async (attackType) => {
+        const token = await login();
+        const res = await request(app.getHttpServer())
+          .get('/admin/events')
+          .query({ attackType })
+          .set('Authorization', `Bearer ${token}`);
+
+        expect(res.status).toBe(200);
+        expect(securityEventFindMany).toHaveBeenLastCalledWith(
+          expect.objectContaining({ where: { attackType } }),
+        );
+      },
+    );
+
+    it('returns only RATE_LIMIT events for the RATE_LIMIT filter', async () => {
+      const rateLimitEvent = {
+        ...sampleEvent,
+        id: 'rate-limit-event',
+        attackType: 'RATE_LIMIT',
+        ruleResult: { classification: 'RATE_LIMIT', detected: true },
+      };
+      securityEventFindMany.mockImplementationOnce(
+        ({ where }: { where: { attackType?: string } }) =>
+          Promise.resolve(
+            where.attackType === 'RATE_LIMIT' ? [rateLimitEvent] : [],
+          ),
+      );
+      securityEventCount.mockImplementationOnce(
+        ({ where }: { where: { attackType?: string } }) =>
+          Promise.resolve(where.attackType === 'RATE_LIMIT' ? 1 : 0),
+      );
+
+      const token = await login();
+      const res = await request(app.getHttpServer())
+        .get('/admin/events')
+        .query({ attackType: 'RATE_LIMIT', page: '1', pageSize: '10' })
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        total: 1,
+        items: [{ id: 'rate-limit-event', attackType: 'RATE_LIMIT' }],
+      });
+      expect(
+        (res.body as { items: { attackType: string }[] }).items.every(
+          (event) => event.attackType === 'RATE_LIMIT',
+        ),
+      ).toBe(true);
+    });
+
+    it('returns 400 for an invalid attackType', async () => {
+      const token = await login();
+      const res = await request(app.getHttpServer())
+        .get('/admin/events')
+        .query({ attackType: 'COMMAND_INJECTION' })
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(400);
+    });
+
     it('returns 400 for a minConfidence outside 0-1', async () => {
       const token = await login();
       const res = await request(app.getHttpServer())
@@ -291,6 +368,57 @@ describe('Admin Auth + API (e2e)', () => {
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(400);
+    });
+  });
+
+  describe('runtime upstream configuration', () => {
+    it('requires authentication', async () => {
+      const res = await request(app.getHttpServer()).get('/admin/upstream');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns the environment fallback when no runtime row exists', async () => {
+      const token = await login();
+      const res = await request(app.getHttpServer())
+        .get('/admin/upstream')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.status).toBe(200);
+      const body = JSON.parse(JSON.stringify(res.body)) as {
+        source?: unknown;
+        url?: unknown;
+      };
+      expect(body.source).toBe('ENVIRONMENT');
+      expect(typeof body.url).toBe('string');
+    });
+
+    it('rejects an invalid URL without persisting it', async () => {
+      const token = await login();
+      const res = await request(app.getHttpServer())
+        .put('/admin/upstream')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ url: 'ftp://invalid.example.com' });
+
+      expect(res.status).toBe(400);
+      expect(wafConfigurationUpsert).not.toHaveBeenCalled();
+    });
+
+    it('tests and activates a valid runtime URL', async () => {
+      const token = await login();
+      global.fetch = jest.fn().mockResolvedValue({ status: 200 });
+
+      const res = await request(app.getHttpServer())
+        .put('/admin/upstream')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ url: 'http://runtime-upstream.test' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        url: 'http://runtime-upstream.test',
+        source: 'RUNTIME',
+        connection: { status: 200, ok: true },
+      });
+      expect(wafConfigurationUpsert).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -348,6 +476,7 @@ describe('Admin Auth + API (e2e)', () => {
         blockedRequests: 3,
         sqlInjectionBlocks: 2,
         xssBlocks: 1,
+        rateLimitBlocks: 0,
       });
     });
 
@@ -491,15 +620,15 @@ describe('Admin Auth + API (e2e)', () => {
       const body = res.body as {
         wafEngine: { status: string; latencyMs: number | null };
         mlService: { status: string; latencyMs: number | null };
-        protectedApi: { status: string; latencyMs: number | null };
+        upstream: { status: string; latencyMs: number | null };
         database: { status: string; latencyMs: number | null };
         checkedAt: string;
       };
       expect(body.wafEngine).toEqual({ status: 'up', latencyMs: null });
       expect(body.mlService.status).toBe('up');
       expect(body.mlService.latencyMs).toEqual(expect.any(Number));
-      expect(body.protectedApi.status).toBe('up');
-      expect(body.protectedApi.latencyMs).toEqual(expect.any(Number));
+      expect(body.upstream.status).toBe('up');
+      expect(body.upstream.latencyMs).toEqual(expect.any(Number));
       expect(body.database.status).toBe('up');
       expect(body.database.latencyMs).toEqual(expect.any(Number));
       expect(body.checkedAt).toEqual(expect.any(String));

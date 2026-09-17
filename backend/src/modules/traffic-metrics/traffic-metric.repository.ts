@@ -10,6 +10,7 @@ export interface TrafficMetricIncrement {
   blocked: 0 | 1;
   sqlInjectionBlocks: 0 | 1;
   xssBlocks: 0 | 1;
+  rateLimitBlocks: 0 | 1;
 }
 
 export interface TrafficMetricTotals {
@@ -18,6 +19,7 @@ export interface TrafficMetricTotals {
   blockedRequests: number;
   sqlInjectionBlocks: number;
   xssBlocks: number;
+  rateLimitBlocks: number;
 }
 
 // Persistence primitive only. A single atomic `INSERT ... ON CONFLICT DO
@@ -36,18 +38,20 @@ export class TrafficMetricRepository {
     await this.prisma.$executeRaw`
       INSERT INTO traffic_metrics (
         id, "bucketStart", "totalRequests", "allowedRequests",
-        "blockedRequests", "sqlInjectionBlocks", "xssBlocks"
+        "blockedRequests", "sqlInjectionBlocks", "xssBlocks", "rateLimitBlocks"
       )
       VALUES (
         ${randomUUID()}, ${bucketStart}, 1, ${counts.allowed},
-        ${counts.blocked}, ${counts.sqlInjectionBlocks}, ${counts.xssBlocks}
+        ${counts.blocked}, ${counts.sqlInjectionBlocks}, ${counts.xssBlocks},
+        ${counts.rateLimitBlocks}
       )
       ON CONFLICT ("bucketStart") DO UPDATE SET
         "totalRequests" = traffic_metrics."totalRequests" + 1,
         "allowedRequests" = traffic_metrics."allowedRequests" + ${counts.allowed},
         "blockedRequests" = traffic_metrics."blockedRequests" + ${counts.blocked},
         "sqlInjectionBlocks" = traffic_metrics."sqlInjectionBlocks" + ${counts.sqlInjectionBlocks},
-        "xssBlocks" = traffic_metrics."xssBlocks" + ${counts.xssBlocks}
+        "xssBlocks" = traffic_metrics."xssBlocks" + ${counts.xssBlocks},
+        "rateLimitBlocks" = traffic_metrics."rateLimitBlocks" + ${counts.rateLimitBlocks}
     `;
   }
 
@@ -69,6 +73,7 @@ export class TrafficMetricRepository {
         blockedRequests: true,
         sqlInjectionBlocks: true,
         xssBlocks: true,
+        rateLimitBlocks: true,
       },
       ...(range
         ? { where: { bucketStart: { gte: range.from, lte: range.to } } }
@@ -81,6 +86,7 @@ export class TrafficMetricRepository {
       blockedRequests: result._sum.blockedRequests ?? 0,
       sqlInjectionBlocks: result._sum.sqlInjectionBlocks ?? 0,
       xssBlocks: result._sum.xssBlocks ?? 0,
+      rateLimitBlocks: result._sum.rateLimitBlocks ?? 0,
     };
   }
 

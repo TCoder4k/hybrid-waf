@@ -19,6 +19,7 @@ export function RecentActivityPanel({ stats }: RecentActivityPanelProps) {
         <InfoRow label="Yêu cầu hợp lệ" value={stats.allowedRequests} />
         <InfoRow label="SQL Injection" value={stats.sqlInjectionBlocks} />
         <InfoRow label="XSS" value={stats.xssBlocks} />
+        <InfoRow label="Rate Limit" value={stats.rateLimitBlocks} />
       </div>
     </Card>
   );

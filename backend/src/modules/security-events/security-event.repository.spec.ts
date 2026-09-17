@@ -67,6 +67,25 @@ describe('SecurityEventRepository', () => {
       );
     });
 
+    it('filters specifically for RATE_LIMIT events', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const count = jest.fn().mockResolvedValue(0);
+      const prisma = {
+        securityEvent: { findMany, count },
+      } as unknown as PrismaService;
+      const repository = new SecurityEventRepository(prisma);
+
+      await repository.findMany({
+        page: 1,
+        pageSize: 10,
+        attackType: 'RATE_LIMIT',
+      });
+
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { attackType: 'RATE_LIMIT' } }),
+      );
+    });
+
     it('builds a method + minConfidence where clause', async () => {
       const findMany = jest.fn().mockResolvedValue([]);
       const count = jest.fn().mockResolvedValue(0);
@@ -151,6 +170,29 @@ describe('SecurityEventRepository', () => {
           where: { timestamp: { gte: from, lte: to } },
         }),
       );
+    });
+  });
+
+  describe('findBlockedInRange', () => {
+    it('excludes RATE_LIMIT events from Rule-vs-ML analysis', async () => {
+      const findMany = jest.fn().mockResolvedValue([]);
+      const prisma = {
+        securityEvent: { findMany },
+      } as unknown as PrismaService;
+      const repository = new SecurityEventRepository(prisma);
+      const from = new Date('2026-09-17T00:00:00.000Z');
+      const to = new Date('2026-09-17T23:59:59.999Z');
+
+      await repository.findBlockedInRange(from, to);
+
+      expect(findMany).toHaveBeenCalledWith({
+        where: {
+          decision: 'BLOCK',
+          attackType: { in: ['SQL_INJECTION', 'XSS'] },
+          timestamp: { gte: from, lte: to },
+        },
+        orderBy: { timestamp: 'desc' },
+      });
     });
   });
 });

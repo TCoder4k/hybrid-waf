@@ -19,18 +19,26 @@ Only the following are in scope:
 - Admin Dashboard
 - Evaluation (of detection accuracy / effectiveness)
 
+## 2a. Approved scope extension — Reverse-Proxy Generalization & L7 Protection (post-MVP)
+
+On 2026-09-15 the user explicitly approved extending scope beyond the original MVP boundary (§2) toward two things:
+
+- A generic, configurable reverse-proxy upstream — the WAF stops assuming it only ever forwards to the bundled `protected-api` demo service.
+- Practical Layer-7 (application-level) rate limiting / abuse protection.
+
+This extension is scoped and phased, not open-ended — see `docs/architecture.md` §21-23 and ADR-8/ADR-9/ADR-10, and the approved implementation plan (phases P0-P9, `docs/memory.md`'s "Reverse-Proxy Generalization & L7 Protection initiative" entry). It does **not** include volumetric Layer-3/4 DDoS mitigation — see the updated §3 below; that remains a permanent, not merely deferred, non-goal.
+
 ## 3. Explicit non-goals
 
 Do not add, even if related or "nice to have," without explicit user approval:
 
-- DDoS protection
+- Volumetric Layer-3/4 DDoS mitigation (SYN floods, UDP reflection/amplification, bandwidth saturation) — permanently out of scope. A NestJS application process cannot mitigate these; they require infrastructure this project does not own (CDN, cloud/hosting-provider DDoS protection, network firewall). **Layer-7 application-level DoS/rate-limiting is now in scope** as of the §2a extension — this line does not un-approve that.
 - Bot detection
-- Advanced rate limiting
 - CSRF protection
 - Malware scanning
 - Command Injection detection
 - LDAP Injection detection
-- SSRF detection
+- SSRF detection *as a traffic-inspection/WAF-rule feature* (detecting SSRF attempts in a client's request payload) — distinct from the §2a generic-upstream work's own SSRF-*safety* requirement (the WAF's own proxy code must never let request-supplied data pick the upstream target), which is an engineering invariant of that feature, not a new detection capability.
 - RCE detection
 - XXE detection
 - Kubernetes-native WAF features
@@ -39,7 +47,7 @@ Do not add, even if related or "nice to have," without explicit user approval:
 - Threat intelligence feeds
 - Automatic AI rule generation
 - Distributed ML training
-- Any other feature outside the MVP scope in section 2
+- Any other feature outside the MVP scope in section 2, except the §2a extension
 
 If a task seems to require one of these, STOP and report it as scope expansion rather than implementing it.
 

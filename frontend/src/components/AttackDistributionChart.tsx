@@ -7,10 +7,15 @@ import { pct } from "@/lib/stats";
 interface AttackDistributionChartProps {
   sqlInjectionBlocks: number;
   xssBlocks: number;
+  // Phase P3 (docs/architecture.md §22) — optional so existing callers
+  // (none left in this codebase, but kept defensive) don't break; treated
+  // as 0 when omitted.
+  rateLimitBlocks?: number;
 }
 
 const SQL_COLOR = "#ef4444"; // red-500
 const XSS_COLOR = "#f97316"; // orange-500
+const RATE_LIMIT_COLOR = "#f59e0b"; // amber-500
 
 // Donut chart with a manual legend (dot + name + count + percent) — recharts'
 // built-in <Legend> can't easily produce this exact layout, and the count in
@@ -19,11 +24,13 @@ const XSS_COLOR = "#f97316"; // orange-500
 export function AttackDistributionChart({
   sqlInjectionBlocks,
   xssBlocks,
+  rateLimitBlocks = 0,
 }: AttackDistributionChartProps) {
-  const total = sqlInjectionBlocks + xssBlocks;
+  const total = sqlInjectionBlocks + xssBlocks + rateLimitBlocks;
   const data = [
     { name: "SQL Injection", value: sqlInjectionBlocks, color: SQL_COLOR },
     { name: "XSS", value: xssBlocks, color: XSS_COLOR },
+    { name: "Rate Limit", value: rateLimitBlocks, color: RATE_LIMIT_COLOR },
   ];
 
   return (

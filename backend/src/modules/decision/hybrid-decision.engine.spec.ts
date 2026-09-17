@@ -52,12 +52,18 @@ function mlUnavailable(reason = 'ML service timeout'): MLDetectionResult {
 
 describe('HybridDecisionEngine', () => {
   const originalThreshold = process.env.ML_CONFIDENCE_THRESHOLD;
+  const originalMode = process.env.WAF_MODE;
 
   afterEach(() => {
     if (originalThreshold === undefined) {
       delete process.env.ML_CONFIDENCE_THRESHOLD;
     } else {
       process.env.ML_CONFIDENCE_THRESHOLD = originalThreshold;
+    }
+    if (originalMode === undefined) {
+      delete process.env.WAF_MODE;
+    } else {
+      process.env.WAF_MODE = originalMode;
     }
   });
 
@@ -213,5 +219,130 @@ describe('HybridDecisionEngine', () => {
     );
 
     expect(decision.action).toBe('BLOCK');
+  });
+
+  // Phase P5 (docs/architecture.md §23, ADR-10) — WAF_MODE onboarding modes.
+  describe('WAF_MODE', () => {
+    it('defaults to HYBRID_BLOCK (unchanged behavior) when WAF_MODE is unset', () => {
+      delete process.env.WAF_MODE;
+      const engine = new HybridDecisionEngine();
+      const decision = engine.decide(
+        makeRequest(),
+        ruleResult({ classification: 'XSS', detected: true, reason: 'x' }),
+        mlAvailable(),
+      );
+
+      expect(decision.action).toBe('BLOCK');
+      expect(decision.shadow).toBeUndefined();
+    });
+
+    it('MONITOR: suppresses a rule BLOCK to ALLOW, recording it as a shadow decision', () => {
+      process.env.WAF_MODE = 'MONITOR';
+      const engine = new HybridDecisionEngine();
+      const decision = engine.decide(
+        makeRequest(),
+        ruleResult({
+          classification: 'SQL_INJECTION',
+          detected: true,
+          reason: 'boolean-based tautology',
+        }),
+        mlAvailable(),
+      );
+
+      expect(decision.action).toBe('ALLOW');
+      expect(decision.classification).toBe('NORMAL');
+      expect(decision.reason).toContain('monitor mode');
+      expect(decision.shadow).toEqual({
+        wouldBlock: true,
+        classification: 'SQL_INJECTION',
+        reason: 'rule match: boolean-based tautology',
+      });
+    });
+
+    it('MONITOR: suppresses an ML-confidence BLOCK to ALLOW, recording it as a shadow decision', () => {
+      process.env.WAF_MODE = 'MONITOR';
+      const engine = new HybridDecisionEngine();
+      const decision = engine.decide(
+        makeRequest(),
+        ruleResult(),
+        mlAvailable({
+          classification: 'XSS',
+          confidence: 0.9,
+          reason: 'ML model predicted XSS',
+        }),
+      );
+
+      expect(decision.action).toBe('ALLOW');
+      expect(decision.shadow).toEqual({
+        wouldBlock: true,
+        classification: 'XSS',
+        reason: 'ml match: ML model predicted XSS',
+      });
+    });
+
+    it('RULE_BLOCK_ML_MONITOR: rule BLOCK is unchanged (still enforced)', () => {
+      process.env.WAF_MODE = 'RULE_BLOCK_ML_MONITOR';
+      const engine = new HybridDecisionEngine();
+      const decision = engine.decide(
+        makeRequest(),
+        ruleResult({
+          classification: 'XSS',
+          detected: true,
+          reason: '<script> tag',
+        }),
+        mlAvailable(),
+      );
+
+      expect(decision.action).toBe('BLOCK');
+      expect(decision.classification).toBe('XSS');
+      expect(decision.shadow).toBeUndefined();
+    });
+
+    it('RULE_BLOCK_ML_MONITOR: an ML-confidence BLOCK is suppressed to ALLOW with a shadow decision', () => {
+      process.env.WAF_MODE = 'RULE_BLOCK_ML_MONITOR';
+      const engine = new HybridDecisionEngine();
+      const decision = engine.decide(
+        makeRequest(),
+        ruleResult(),
+        mlAvailable({
+          classification: 'SQL_INJECTION',
+          confidence: 0.85,
+          reason: 'ML model predicted SQL_INJECTION',
+        }),
+      );
+
+      expect(decision.action).toBe('ALLOW');
+      expect(decision.reason).toContain('rule_block_ml_monitor mode');
+      expect(decision.shadow).toEqual({
+        wouldBlock: true,
+        classification: 'SQL_INJECTION',
+        reason: 'ml match: ML model predicted SQL_INJECTION',
+      });
+    });
+
+    it('an unrecognized WAF_MODE value falls back to HYBRID_BLOCK', () => {
+      process.env.WAF_MODE = 'NOT_A_REAL_MODE';
+      const engine = new HybridDecisionEngine();
+      const decision = engine.decide(
+        makeRequest(),
+        ruleResult({ classification: 'XSS', detected: true, reason: 'x' }),
+        mlAvailable(),
+      );
+
+      expect(decision.action).toBe('BLOCK');
+    });
+
+    it('HYBRID_BLOCK, ALLOW paths (below threshold / both normal) never carry a shadow decision', () => {
+      process.env.WAF_MODE = 'MONITOR';
+      const engine = new HybridDecisionEngine();
+      const decision = engine.decide(
+        makeRequest(),
+        ruleResult(),
+        mlAvailable({ classification: 'XSS', confidence: 0.1 }),
+      );
+
+      expect(decision.action).toBe('ALLOW');
+      expect(decision.shadow).toBeUndefined();
+    });
   });
 });

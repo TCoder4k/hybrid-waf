@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { UpstreamConfigModule } from '../../common/upstream-config.module';
 import { DatabaseModule } from '../../database/database.module';
 import { AuthModule } from '../auth/auth.module';
 import { SecurityEventsModule } from '../security-events/security-events.module';
@@ -20,6 +21,7 @@ import { SystemStatusService } from './system-status.service';
     SecurityEventsModule,
     TrafficMetricsModule,
     DatabaseModule,
+    UpstreamConfigModule,
   ],
   controllers: [AdminController],
   providers: [AdminService, SystemStatusService],

@@ -9,7 +9,7 @@ import { RequestNormalizerService } from '../request/request-normalizer.service'
 import { SecurityEventLogger } from '../security-events/security-event-logger.service';
 import { SecurityEventRepository } from '../security-events/security-event.repository';
 import { TrafficMetricsRecorder } from '../traffic-metrics/traffic-metrics.recorder';
-import { ProtectedApiClientService } from './protected-api-client.service';
+import { UpstreamProxyService } from './upstream-proxy.service';
 import { WafService } from './waf.service';
 
 function makeRequest(overrides: Partial<Request> = {}): Request {
@@ -58,9 +58,9 @@ function makeService(
   const forwardMock = jest
     .fn()
     .mockResolvedValue({ status: 200, headers: {}, body: '{}' });
-  const protectedApiClient = {
+  const upstreamProxy = {
     forward: forwardMock,
-  } as unknown as ProtectedApiClientService;
+  } as unknown as UpstreamProxyService;
 
   const service = new WafService(
     normalizer,
@@ -69,7 +69,7 @@ function makeService(
     decisionEngine,
     securityEventLogger,
     trafficMetricsRecorder,
-    protectedApiClient,
+    upstreamProxy,
   );
 
   return {
@@ -89,7 +89,7 @@ describe('WafService', () => {
     jest.restoreAllMocks();
   });
 
-  it('normalizes, runs rule + ML detection, then forwards an ALLOWed request to Protected API', async () => {
+  it('normalizes, runs rule + ML detection, then forwards an ALLOWed request to the configured upstream', async () => {
     const {
       service,
       normalizer,
