@@ -1,10 +1,10 @@
 import {
   BarChart3,
   Home,
+  Target,
   Settings,
   Shield,
   SlidersHorizontal,
-  TrendingUp,
   type LucideIcon,
 } from "lucide-react";
 
@@ -21,6 +21,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Tổng quan", icon: Home },
   { href: "/events", label: "Sự kiện bảo mật", icon: Shield },
+  { href: "/attack-simulation", label: "Giả lập tấn công", icon: Target },
   { href: "/statistics", label: "Thống kê chi tiết", icon: BarChart3 },
   { href: "/system", label: "Quản lý hệ thống", icon: SlidersHorizontal },
   { href: "/settings", label: "Cài đặt", icon: Settings },

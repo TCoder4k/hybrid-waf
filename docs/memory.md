@@ -2,7 +2,7 @@
 
 This file tracks the current state of the Hybrid WAF project. It is scoped to this project only. Read alongside `docs/CLAUDE.md` before planning any task, and update it after finishing a phase.
 
-Last updated: 2026-09-17
+Last updated: 2026-09-18
 
 ## Current Phase
 
@@ -11,6 +11,8 @@ Phase 11 — Evaluation (complete). This was the last phase on the `docs/CLAUDE.
 **As of 2026-09-15/16, a new post-MVP initiative was completed**: Reverse-Proxy Generalization & L7 Protection (`docs/CLAUDE.md` §2a, `docs/architecture.md` §21-23, ADR-8/9/10, `docs/PROTECTING_ANOTHER_APP.md`) — the WAF now protects an arbitrary configurable upstream (not just the bundled `protected-api`) and has Layer-7 rate limiting/DoS protection, explicitly excluding volumetric Layer-3/4 DDoS mitigation. **Phases P0 through P8 are complete** (P1-P8 implemented in one continuous session per explicit user instruction to stop phase-by-phase gating and build the rest in one pass — see "Reverse-Proxy Generalization & L7 Protection initiative" detail below for the full breakdown). P4 (Redis) and P9 (DB-backed dashboard-mutable settings) remain explicitly deferred/optional, not implemented, per the approved plan. **Nothing has been committed** — all changes are in the working tree awaiting user review, per `docs/CLAUDE.md` §14 (Claude never commits).
 
 ## Status
+
+- **Attack Simulation Sandbox** (2026-09-18): added a standalone `/attack-simulation` sidebar destination between Security Events and Statistics. The page sends normal, SQL Injection, and XSS requests through the existing WAF public/proxy route, not a fake backend test endpoint; it displays real HTTP status, latency, response body, and Retry-After values. Local Docker verification passed: page `200`, normal WAF request `200`, SQLi request `403`. No backend detection, upstream, or rate-limit behavior was changed.
 
 - Phase 0 (Project Foundation) complete and reviewed
 - Phase 1A (Architecture Design) complete and approved — ADR-1 through ADR-6, ADR-2/ADR-5 with clarifications

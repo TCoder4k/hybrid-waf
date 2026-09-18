@@ -6,6 +6,15 @@ import { clearToken, getToken } from "./auth";
 const BASE_URL =
   process.env.NEXT_PUBLIC_ADMIN_API_URL ?? "http://localhost:3000";
 
+function wafRequestUrl(endpoint: string): string {
+  const normalized = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const adminApiSuffix = "/api";
+  const base = BASE_URL.endsWith(adminApiSuffix)
+    ? BASE_URL.slice(0, -adminApiSuffix.length)
+    : BASE_URL;
+  return `${base}${normalized}`;
+}
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
@@ -18,6 +27,55 @@ export class ApiError extends Error {
 
 export interface LoginResponse {
   accessToken: string;
+}
+
+export interface WafTestRequest {
+  method: "GET" | "POST";
+  endpoint: string;
+  payload: string;
+}
+
+export interface WafTestResult {
+  status: number;
+  statusText: string;
+  latencyMs: number;
+  body: unknown;
+  retryAfter: string | null;
+}
+
+export async function sendWafTestRequest(
+  request: WafTestRequest,
+): Promise<WafTestResult> {
+  const startedAt = performance.now();
+  const response = await fetch(
+    request.method === "GET"
+      ? `${wafRequestUrl(request.endpoint)}?q=${encodeURIComponent(request.payload)}`
+      : wafRequestUrl(request.endpoint),
+    {
+      method: request.method,
+      cache: "no-store",
+      headers:
+        request.method === "POST"
+          ? { "content-type": "application/json" }
+          : undefined,
+      body:
+        request.method === "POST"
+          ? JSON.stringify({ input: request.payload })
+          : undefined,
+    },
+  );
+  const contentType = response.headers.get("content-type") ?? "";
+  const body = contentType.includes("application/json")
+    ? await response.json()
+    : await response.text();
+
+  return {
+    status: response.status,
+    statusText: response.statusText,
+    latencyMs: Math.round(performance.now() - startedAt),
+    body,
+    retryAfter: response.headers.get("retry-after"),
+  };
 }
 
 export interface TrafficStats {
